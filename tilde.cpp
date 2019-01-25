@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <vector>
 
 const unsigned int WIDTH = 800;
 const unsigned int HEIGHT = 600;
@@ -26,6 +27,11 @@ KeyConfig PLAYER_KEYS[] = {
 };
 #else
 #endif
+
+struct Item {
+    sf::CircleShape shape;
+    int carriedBy; // -1 if not carried
+};
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "~");
@@ -59,13 +65,26 @@ int main() {
         playerShapes[i].setPosition(pos);
     }
 
+    float spawnInterval = 1.0f;
+    std::vector<Item> items{};
+
     sf::Clock deltaClock;
+    sf::Clock spawnClock;
     while (window.isOpen()) {
         float dt = deltaClock.restart().asSeconds();
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
+        }
+
+        if (spawnClock.getElapsedTime().asSeconds() > spawnInterval) {
+            sf::CircleShape shape(10, 3);
+            shape.setOrigin(10, 10);
+            shape.setPosition(WIDTH / 2, HEIGHT / 2);
+            shape.setFillColor(sf::Color(200, 255, 255));
+            items.push_back(Item { shape, -1 });
+            spawnClock.restart();
         }
 
         const float PLAYER_SPEED = 80.f;
@@ -82,6 +101,27 @@ int main() {
             if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].right)) {
                 playerShapes[i].move(PLAYER_SPEED * dt, 0.f);
             }
+
+            auto boundingBox = playerShapes[i].getGlobalBounds();
+            for (auto& item : items) {
+                // TODO: add stun when stealing
+                if (boundingBox.intersects(item.shape.getGlobalBounds())) {
+                    item.carriedBy = i;
+                }
+            }
+        }
+
+        for (size_t i = 0; i < items.size(); i++) {
+            if (items[i].carriedBy > 0) {
+                items[i].shape.setPosition(playerShapes[items[i].carriedBy].getPosition());
+            }
+
+            for (auto& house : houses) {
+                auto boundingBox = house.getGlobalBounds();
+                if (boundingBox.intersects(items[i].shape.getGlobalBounds())) {
+                    // TODO: Add to player score
+                }
+            }
         }
 
         // Drawing
@@ -91,6 +131,9 @@ int main() {
         }
         for (auto p : playerShapes) {
             window.draw(p);
+        }
+        for (auto item : items) {
+            window.draw(item.shape);
         }
 
         window.display();
