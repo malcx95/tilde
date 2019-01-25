@@ -3,10 +3,10 @@
 #include <vector>
 #include "config.h"
 #include "player.hpp"
+#include "constants.hpp"
+#include "item.hpp"
 
-const unsigned int WIDTH = 800;
-const unsigned int HEIGHT = 600;
-const unsigned int MARGIN = 40;
+const unsigned int ITEM_SCORE = 10;
 
 struct KeyConfig {
     sf::Keyboard::Key up;
@@ -33,74 +33,27 @@ KeyConfig PLAYER_KEYS[] = {
 };
 #endif
 
-const int MAX_ITEMS = 10;
-
-struct Item {
-    bool alive;
-    sf::CircleShape shape;
-    int carriedBy; // -1 if not carried
-};
-
-void spawn_item(std::vector<Item>& items) {
-    for (int i = 0; i < MAX_ITEMS; i++) {
-        if (!items[i].alive) {
-            sf::CircleShape shape(10, 3);
-            shape.setOrigin(10, 10);
-            shape.setPosition(WIDTH / 2, HEIGHT / 2);
-            shape.setFillColor(sf::Color(200, 255, 255));
-
-            items[i].alive = true;
-            items[i].carriedBy = -1;
-            items[i].shape = shape;
-
-            break;
-        }
-    }
-}
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "~");
+    sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
 
     sf::Font font;
     font.loadFromFile("arial.ttf");
 
     Player players[] = {
-        Player(0, sf::Color(255, 100, 100), sf::Vector2f{MARGIN, MARGIN}),
-        Player(1, sf::Color(100, 255, 100), sf::Vector2f{MARGIN, HEIGHT - HOUSE_HEIGHT - MARGIN}),
-        Player(2, sf::Color(100, 100, 255), sf::Vector2f{WIDTH - HOUSE_WIDTH - MARGIN, MARGIN}),
-        Player(3, sf::Color(255, 255, 100), sf::Vector2f{WIDTH - HOUSE_WIDTH - MARGIN,
-        HEIGHT - HOUSE_HEIGHT - MARGIN})
+        Player(0, sf::Color(255, 100, 100), sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}),
+        Player(1, sf::Color(100, 255, 100), sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}),
+        Player(2, sf::Color(100, 100, 255), sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}),
+        Player(3, sf::Color(255, 255, 100), sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
+        WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
     };
 
-    // sf::CircleShape playerShape(10);
-    // playerShape.setOrigin(10, 10);
-    // sf::CircleShape playerShapes[] = {
-    //     playerShape,
-    //     playerShape,
-    //     playerShape,
-    //     playerShape
-    // };
-    // playerShapes[0].setFillColor(sf::Color(255, 100, 100));
-    // playerShapes[1].setFillColor(sf::Color(100, 255, 100));
-    // playerShapes[2].setFillColor(sf::Color(100, 100, 255));
-    // playerShapes[3].setFillColor(sf::Color(255, 255, 100));
-    // for (int i = 0; i < 4; i++) {
-    //     auto pos = houses[i].getPosition() +
-    //         sf::Vector2f(HOUSE_WIDTH / 2, HOUSE_HEIGHT / 2);
-    //     playerShapes[i].setPosition(pos);
-    // }
-
     float spawnInterval = 1.0f;
-    std::vector<Item> items(MAX_ITEMS);
-    for (int i = 0; i < MAX_ITEMS; i++) {
-        items[i].alive = false;
-        items[i].carriedBy = -1;
-    }
-
-    int player_scores[] = { 0, 0, 0, 0 };
+    std::vector<Item*> items;
 
     sf::Clock deltaClock;
     sf::Clock spawnClock;
+
     while (window.isOpen()) {
         float dt = deltaClock.restart().asSeconds();
         sf::Event event;
@@ -110,62 +63,48 @@ int main() {
         }
 
         if (spawnClock.getElapsedTime().asSeconds() > spawnInterval) {
+            // defined in item.hpp
             spawn_item(items);
             spawnClock.restart();
         }
 
         const float PLAYER_SPEED = 80.f;
-        for (int i = 0; i < 4; i++) {
+        for (size_t i = 0; i < 4; i++) {
             if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].up)) {
-                players[i].shape.move(0.f, -PLAYER_SPEED * dt);
+                players[i].move(0.f, -PLAYER_SPEED * dt);
             }
             if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].down)) {
-                players[i].shape.move(0.f, PLAYER_SPEED * dt);
+                players[i].move(0.f, PLAYER_SPEED * dt);
             }
             if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].left)) {
-                players[i].shape.move(-PLAYER_SPEED * dt, 0.f);
+                players[i].move(-PLAYER_SPEED * dt, 0.f);
             }
             if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].right)) {
-                players[i].shape.move(PLAYER_SPEED * dt, 0.f);
+                players[i].move(PLAYER_SPEED * dt, 0.f);
             }
 
-            bool already_carries = false;
-            for (int j = 0; j < MAX_ITEMS; j++) {
-                if (items[j].alive && items[j].carriedBy == i) {
-                    already_carries = true;
-                    break;
-                }
-            }
-
-            if (!already_carries) {
+            if (players[i].carried_item == nullptr) {
                 auto boundingBox = players[i].shape.getGlobalBounds();
-                for (int j = 0; j < MAX_ITEMS; j++) {
-                    // TODO: add stun when stealing
-                    if (items[j].alive && boundingBox.intersects(items[j].shape.getGlobalBounds())) {
-                        items[j].carriedBy = i;
+                for (Item* item : items) {
+
+                    if (boundingBox.intersects(item->shape.getGlobalBounds())) {
+                        players[i].carried_item = item;
                         break;
                     }
                 }
             }
         }
 
-        for (size_t i = 0; i < items.size(); i++) {
-            int carrier = items[i].carriedBy;
-            if (items[i].alive && carrier >= 0) {
-                items[i].shape.setPosition(players[carrier].shape.getPosition());
+        for (Player& p : players) {
+            if (p.carried_item != nullptr && p.is_home()) {
+                p.score += ITEM_SCORE;
 
-                auto boundingBox = players[carrier].house.getGlobalBounds();
-                if (boundingBox.intersects(items[i].shape.getGlobalBounds())) {
-                    player_scores[carrier] += 10;
-                    items[i].alive = false;
-
-                    if (player_scores[carrier] >= 100) {
-                        window.close();
-
-                        // TODO: display player color instead and keep window open
-                        std::cout << "player " << carrier << " won the game" << std::endl;
-                    }
-                }
+                // defined in item.hpp
+                remove_item(items, p.carried_item);
+                p.carried_item = nullptr;
+            }
+            if (p.score >= 100) {
+                std::cout << "player " << p.index << " won the game" << std::endl;
             }
         }
 
@@ -176,7 +115,7 @@ int main() {
 
             sf::Text text;
             text.setFont(font);
-            text.setString(std::to_string(player_scores[i]));
+            text.setString(std::to_string(players[i].score));
             text.setCharacterSize(50);
             text.setPosition(players[i].house.getPosition());
             window.draw(text);
@@ -185,9 +124,7 @@ int main() {
             window.draw(p.shape);
         }
         for (auto item : items) {
-            if (item.alive) {
-                window.draw(item.shape);
-            }
+            window.draw(item->shape);
         }
 
         window.display();

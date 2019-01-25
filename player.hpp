@@ -1,8 +1,8 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include <string>
 #include <SFML/Graphics.hpp>
+#include "item.hpp"
 
 const unsigned int HOUSE_WIDTH = 200;
 const unsigned int HOUSE_HEIGHT = 100;
@@ -24,6 +24,12 @@ struct Player {
     sf::CircleShape shape;
 
     sf::RectangleShape house;
+
+    Item* carried_item;
+
+    void set_position(sf::Vector2f position);
+    void move(float dx, float dy);
+    bool is_home() const;
 
 };
 
