@@ -53,12 +53,17 @@ void spawn_item(std::vector<Item>& items) {
             items[i].alive = true;
             items[i].carriedBy = -1;
             items[i].shape = shape;
+
+            break;
         }
     }
 }
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "~");
+
+    sf::Font font;
+    font.loadFromFile("arial.ttf");
 
     sf::RectangleShape house(sf::Vector2f(HOUSE_WIDTH, HOUSE_HEIGHT));
     house.setFillColor(sf::Color(100, 100, 100));
@@ -91,6 +96,12 @@ int main() {
 
     float spawnInterval = 1.0f;
     std::vector<Item> items(MAX_ITEMS);
+    for (int i = 0; i < MAX_ITEMS; i++) {
+        items[i].alive = false;
+        items[i].carriedBy = -1;
+    }
+
+    int player_scores[] = { 0, 0, 0, 0 };
 
     sf::Clock deltaClock;
     sf::Clock spawnClock;
@@ -122,33 +133,58 @@ int main() {
                 playerShapes[i].move(PLAYER_SPEED * dt, 0.f);
             }
 
-            auto boundingBox = playerShapes[i].getGlobalBounds();
-            for (auto& item : items) {
-                // TODO: add stun when stealing
-                if (boundingBox.intersects(item.shape.getGlobalBounds())) {
-                    item.carriedBy = i;
+            bool already_carries = false;
+            for (int j = 0; j < MAX_ITEMS; j++) {
+                if (items[j].alive && items[j].carriedBy == i) {
+                    already_carries = true;
+                    break;
+                }
+            }
+
+            if (!already_carries) {
+                auto boundingBox = playerShapes[i].getGlobalBounds();
+                for (int j = 0; j < MAX_ITEMS; j++) {
+                    // TODO: add stun when stealing
+                    if (items[j].alive && boundingBox.intersects(items[j].shape.getGlobalBounds())) {
+                        items[j].carriedBy = i;
+                        break;
+                    }
                 }
             }
         }
 
         for (size_t i = 0; i < items.size(); i++) {
-            if (items[i].carriedBy >= 0) {
-                items[i].shape.setPosition(playerShapes[items[i].carriedBy].getPosition());
-            }
+            int carrier = items[i].carriedBy;
+            if (items[i].alive && carrier >= 0) {
+                items[i].shape.setPosition(playerShapes[carrier].getPosition());
 
-            for (auto& house : houses) {
-                auto boundingBox = house.getGlobalBounds();
+                auto boundingBox = houses[carrier].getGlobalBounds();
                 if (boundingBox.intersects(items[i].shape.getGlobalBounds())) {
-                    // TODO: Add to player score
+                    player_scores[carrier] += 10;
                     items[i].alive = false;
+
+                    if (player_scores[carrier] >= 100) {
+                        window.close();
+
+                        // TODO: display player color instead and keep window open
+                        std::cout << "player " << carrier << " won the game" << std::endl;
+                    }
                 }
             }
         }
 
         // Drawing
         window.clear(sf::Color::Black);
-        for (auto h : houses) {
-            window.draw(h);
+        for (int i = 0; i < 4; i++) {
+            window.draw(houses[i]);
+
+            sf::Text text;
+            text.setFont(font);
+            text.setString(std::to_string(player_scores[i]));
+            text.setCharacterSize(50);
+            text.setFillColor(sf::Color(255, 255, 255));
+            text.setPosition(houses[i].getPosition());
+            window.draw(text);
         }
         for (auto p : playerShapes) {
             window.draw(p);
