@@ -87,8 +87,9 @@ int main() {
                 auto boundingBox = players[i].shape.getGlobalBounds();
                 for (Item* item : items) {
 
-                    if (boundingBox.intersects(item->shape.getGlobalBounds())) {
+                    if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
                         players[i].carried_item = item;
+                        item->being_carried = true;
                         break;
                     }
                 }

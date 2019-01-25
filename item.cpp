@@ -10,6 +10,7 @@ void spawn_item(std::vector<Item*>& items) {
         shape.setFillColor(sf::Color(200, 255, 255));
 
         item->shape = shape;
+        item->being_carried = false;
 
         items.push_back(item);
     }
