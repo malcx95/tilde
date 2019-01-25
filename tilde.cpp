@@ -89,6 +89,9 @@ int main() {
 
                     if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
                         players[i].carried_item = item;
+
+                        // TODO maybe remove
+                        item->shape.setPosition(players[i].shape.getPosition());
                         item->being_carried = true;
                         break;
                     }
