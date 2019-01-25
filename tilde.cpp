@@ -1,21 +1,37 @@
 #include <SFML/Graphics.hpp>
 
-int main() {
-    sf::RenderWindow window(sf::VideoMode(800, 600), "~");
+const unsigned int WIDTH = 800;
+const unsigned int HEIGHT = 600;
+const unsigned int MARGIN = 40;
 
-    while (window.isOpen())
-    {
+const unsigned int HOUSE_WIDTH = 200;
+const unsigned int HOUSE_HEIGHT = 100;
+
+int main() {
+    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "~");
+
+    sf::RectangleShape house(sf::Vector2f(HOUSE_WIDTH, HOUSE_HEIGHT));
+    sf::RectangleShape houses[] = { house, house, house, house };
+    houses[0].setPosition(MARGIN, MARGIN);
+    houses[1].setPosition(MARGIN, HEIGHT - HOUSE_HEIGHT - MARGIN);
+    houses[2].setPosition(WIDTH - HOUSE_WIDTH - MARGIN, MARGIN);
+    houses[3].setPosition(
+        WIDTH - HOUSE_WIDTH - MARGIN,
+        HEIGHT - HOUSE_HEIGHT - MARGIN
+    );
+
+    while (window.isOpen()) {
         sf::Event event;
-        while (window.pollEvent(event))
-        {
+        while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
         }
 
         window.clear(sf::Color::Black);
 
-        // TODO: draw everything here...
-        // window.draw(...);
+        for (auto h : houses) {
+            window.draw(h);
+        }
 
         window.display();
     }
