@@ -34,10 +34,28 @@ KeyConfig PLAYER_KEYS[] = {
 };
 #endif
 
+const int MAX_ITEMS = 10;
+
 struct Item {
+    bool alive;
     sf::CircleShape shape;
     int carriedBy; // -1 if not carried
 };
+
+void spawn_item(std::vector<Item>& items) {
+    for (int i = 0; i < MAX_ITEMS; i++) {
+        if (!items[i].alive) {
+            sf::CircleShape shape(10, 3);
+            shape.setOrigin(10, 10);
+            shape.setPosition(WIDTH / 2, HEIGHT / 2);
+            shape.setFillColor(sf::Color(200, 255, 255));
+
+            items[i].alive = true;
+            items[i].carriedBy = -1;
+            items[i].shape = shape;
+        }
+    }
+}
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "~");
@@ -72,7 +90,7 @@ int main() {
     }
 
     float spawnInterval = 1.0f;
-    std::vector<Item> items{};
+    std::vector<Item> items(MAX_ITEMS);
 
     sf::Clock deltaClock;
     sf::Clock spawnClock;
@@ -85,11 +103,7 @@ int main() {
         }
 
         if (spawnClock.getElapsedTime().asSeconds() > spawnInterval) {
-            sf::CircleShape shape(10, 3);
-            shape.setOrigin(10, 10);
-            shape.setPosition(WIDTH / 2, HEIGHT / 2);
-            shape.setFillColor(sf::Color(200, 255, 255));
-            items.push_back(Item { shape, -1 });
+            spawn_item(items);
             spawnClock.restart();
         }
 
@@ -118,7 +132,7 @@ int main() {
         }
 
         for (size_t i = 0; i < items.size(); i++) {
-            if (items[i].carriedBy > 0) {
+            if (items[i].carriedBy >= 0) {
                 items[i].shape.setPosition(playerShapes[items[i].carriedBy].getPosition());
             }
 
@@ -126,6 +140,7 @@ int main() {
                 auto boundingBox = house.getGlobalBounds();
                 if (boundingBox.intersects(items[i].shape.getGlobalBounds())) {
                     // TODO: Add to player score
+                    items[i].alive = false;
                 }
             }
         }
@@ -139,7 +154,9 @@ int main() {
             window.draw(p);
         }
         for (auto item : items) {
-            window.draw(item.shape);
+            if (item.alive) {
+                window.draw(item.shape);
+            }
         }
 
         window.display();
