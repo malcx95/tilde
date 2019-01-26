@@ -17,6 +17,9 @@ const unsigned int PROGRESSBAR_HEIGHT = 5;
 
 const float SPEED_INCREASE = 2.;
 
+const double ANIMATION_SPEED = 0.01;
+const double ANIMATION_AMPLITUDE = .04;
+
 struct Powerup {
 
     Powerup(PowerupType type, sf::Vector2f position, PowerupTextures powerup_textures);
@@ -34,6 +37,10 @@ struct Powerup {
     void activate();
 
     void update_progress();
+
+    void update_animation();
+
+    unsigned long animation_counter;
 
     sf::Sprite sprite;
 

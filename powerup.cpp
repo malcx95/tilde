@@ -8,6 +8,7 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position, PowerupTextures poweru
     : type{type}, bar{PROGRESSBAR_WIDTH, PROGRESSBAR_HEIGHT} {
     this->sprite.setPosition(position);
     this->active = false;
+    this->animation_counter = 0;
     this->sprite.setOrigin(POWERUP_WIDTH, POWERUP_WIDTH);
     sf::Color c;
     switch (type) {
@@ -32,6 +33,13 @@ void Powerup::activate() {
     this->active = true;
 }
 
+void Powerup::update_animation() {
+    this->animation_counter++;
+    double dy = ANIMATION_AMPLITUDE*sin((double)this->animation_counter*ANIMATION_SPEED);
+    auto curr_x = this->sprite.getPosition().x;
+    auto curr_y = this->sprite.getPosition().y;
+    this->sprite.setPosition(curr_x, curr_y + dy);
+}
 
 void Powerup::update_progress() {
     this->bar.set_progress(this->clock.getElapsedTime().asSeconds() / POWERUP_TIME);
