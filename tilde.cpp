@@ -352,6 +352,8 @@ int main() {
     sf::Clock spawn_clock;
     sf::Clock powerup_clock;
 
+    bool game_finished = false;
+    std::string win_text = "";
     while (window.isOpen()) {
         float dt = delta_clock.restart().asSeconds();
         sf::Event event;
@@ -361,13 +363,11 @@ int main() {
         }
 
         if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
-            // defined in item.hpp
             spawn_item(items);
             spawn_clock.restart();
         }
 
         if (powerup_clock.getElapsedTime().asSeconds() > POWERUP_SPAWN_INTERVAL) {
-            // defined in item.hpp
             spawn_powerup(powerups, players, powerup_textures);
             powerup_clock.restart();
         }
@@ -402,8 +402,9 @@ int main() {
                 if (empty_boxes > 0) {
                     p.boxes[available_indices[rand() % empty_boxes]].filled = true;
                 }
-                if (empty_boxes == 1) {
-                    std::cout << "player " << p.index << " won the game" << std::endl;
+                if (empty_boxes == 1 && !game_finished) {
+                    win_text = "player " + std::to_string(p.index) + " won the game!";
+                    game_finished = true;
                 }
             }
         }
@@ -434,13 +435,6 @@ int main() {
                     window.draw(fire_sprite);
                 }
             }
-
-            // sf::Text text;
-            // text.setFont(font);
-            // text.setString(std::to_string(players[i].score));
-            // text.setCharacterSize(50);
-            // text.setPosition(players[i].house_sprite.getPosition() + sf::Vector2f(0, 15));
-            // window.draw(text);
         }
         for (auto p : players) {
             float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
@@ -463,6 +457,15 @@ int main() {
             } else {
                 powerup->bar.draw(window);
             }
+        }
+
+        if (win_text != "") {
+            sf::Text text;
+            text.setFont(font);
+            text.setString(win_text);
+            text.setCharacterSize(60);
+            text.setPosition(sf::Vector2f(100, WINDOW_HEIGHT / 2 - 30));
+            window.draw(text);
         }
 
         window.display();
