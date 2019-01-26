@@ -24,10 +24,10 @@ enum Direction { Up, Right, Down, Left };
 struct Player {
     Player(
         unsigned int index,
-        sf::Color color,
         KeyConfig config,
         sf::Vector2f house_pos,
-        sf::Texture* texture
+        sf::Texture* texture,
+        sf::Texture* house_texture
     );
 
     KeyConfig key_config;
@@ -38,6 +38,7 @@ struct Player {
     Direction direction;
 
     sf::Sprite sprite;
+    sf::Sprite house_sprite;
     sf::RectangleShape house;
     std::vector<Box> boxes;
     Item* carried_item;
