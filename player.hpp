@@ -37,6 +37,7 @@ struct Player {
     Direction direction;
 
     sf::Sprite sprite;
+    sf::CircleShape shape;
     sf::RectangleShape house;
     std::vector<Box> boxes;
     Item* carried_item;

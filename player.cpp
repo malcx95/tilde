@@ -6,7 +6,7 @@ Player::Player(
     KeyConfig config,
     sf::Vector2f house_pos,
     sf::Texture* texture
-) : key_config{config}, index{index}, direction{Down}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
+) : key_config{config}, index{index}, direction{Down}, shape{PLAYER_RADIUS}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
     this->score = 0;
     this->stunned = false;
     this->moving = false;
@@ -17,9 +17,10 @@ Player::Player(
         sf::Color(100 + color.r * 0.2, 100 + color.g * 0.2, 100 + color.b * 0.2));
 
     this->sprite.setTexture(*texture);
-    this->sprite.setOrigin(8, 8);
+    this->sprite.setOrigin(PLAYER_RADIUS, PLAYER_RADIUS);
+    this->shape.setOrigin(PLAYER_RADIUS, PLAYER_RADIUS);
     auto player_pos = house_pos + sf::Vector2f(HOUSE_WIDTH / 2, HOUSE_HEIGHT / 2);
-    this->sprite.setPosition(player_pos);
+    set_position(player_pos);
 
     const unsigned int item_spacing = 40;
     for (unsigned int i = 0; i < NUM_BOXES; i++) {
@@ -41,6 +42,7 @@ void Player::set_position(sf::Vector2f position) {
         this->carried_item->shape.setPosition(position);
     }
     this->sprite.setPosition(position);
+    this->shape.setPosition(position);
 }
 
 void Player::move(float dx, float dy) {
@@ -48,6 +50,7 @@ void Player::move(float dx, float dy) {
         this->carried_item->shape.move(dx, dy);
     }
     this->sprite.move(dx, dy);
+    this->shape.move(dx, dy);
 }
 
 bool Player::is_home() const {

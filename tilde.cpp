@@ -93,7 +93,7 @@ void handle_item_pickup(std::vector<Player>& players,
                         std::vector<Item*>& items) {
     for (Player& p : players) {
         if (p.carried_item == nullptr) {
-            auto boundingBox = p.sprite.getGlobalBounds();
+            auto boundingBox = p.shape.getGlobalBounds();
             for (Item* item : items) {
 
                 if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
@@ -112,15 +112,15 @@ void handle_item_pickup(std::vector<Player>& players,
 
 void handle_item_stealing(std::vector<Player>& players) {
     for (Player& p : players) {
-        auto player_bounds = p.sprite.getGlobalBounds();
+        auto player_bounds = p.shape.getGlobalBounds();
 
         for (Player& enemy : players) {
             if (p.index == enemy.index) continue;
 
-            if (player_bounds.intersects(enemy.sprite.getGlobalBounds())) {
+            if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
                 if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
-                    enemy.carried_item->shape.setPosition(enemy.sprite.getPosition());
+                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
 
                     p.stun_clock.restart().asSeconds();
