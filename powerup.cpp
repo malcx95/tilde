@@ -11,12 +11,15 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position)
     this->active = false;
     sf::Color c;
     switch (type) {
-        case PowerupType::FASTER:
-            c = sf::Color{255, 50, 50};
-            break;
-        case PowerupType::IMMUNITY:
-            c = sf::Color{255, 0, 255};
-            break;
+    case PowerupType::FASTER:
+        c = sf::Color{255, 50, 50};
+        break;
+    case PowerupType::IMMUNITY:
+        c = sf::Color{255, 0, 255};
+        break;
+    case PowerupType::FIRE:
+        c = sf::Color{255, 200, 50};
+        break;
     }
     this->shape.setFillColor(c);
     this->bar.set_colors(c, sf::Color{50, 50, 50});

@@ -11,12 +11,11 @@
 #include "powerup.hpp"
 #include "item.hpp"
 
-const unsigned int ITEM_SCORE = 10;
 const float PLAYER_SPEED = 80.f;
-const int WIN_SCORE = 100;
 const float ITEM_SPAWN_INTERVAL = 5.0f;
 const float POWERUP_SPAWN_INTERVAL = 1.0;
 const float STUN_TIME = 3;
+const float BURN_TIME = 5;
 
 
 // SFML doesn't support scancodes...
@@ -149,6 +148,41 @@ void handle_item_stealing(std::vector<Player>& players) {
     }
 }
 
+void handle_fire(std::vector<Player>& players) {
+    for (Player& p : players) {
+        // Light items that player walks on
+        if (p.powerup != nullptr && p.powerup->type == PowerupType::FIRE) {
+            for (Player& other : players) {
+                for (Box& box : other.boxes) {
+                    auto box_bb = box.shape.getGlobalBounds();
+                    auto player_bb = p.shape.getGlobalBounds();
+                    if (box.filled && !box.on_fire && box_bb.intersects(player_bb)) {
+                        box.on_fire = true;
+                        box.fire_clock.restart();
+                    }
+                }
+            }
+        }
+
+        for (Box& box : p.boxes) {
+            if (box.on_fire) {
+                auto box_bb = box.shape.getGlobalBounds();
+                auto player_bb = p.shape.getGlobalBounds();
+
+                // Let players put out fires on their own stuff
+                if (box_bb.intersects(player_bb)) {
+                    box.on_fire = false;
+                }
+
+                if (box.fire_clock.getElapsedTime().asSeconds() > BURN_TIME) {
+                    box.filled = false;
+                    box.on_fire = false;
+                }
+            }
+        }
+    }
+}
+
 void handle_stun(std::vector<Player>& players) {
     for (Player& p : players) {
         if (p.stunned) {
@@ -255,6 +289,8 @@ int main() {
     green_house_texture.loadFromFile("../assets/house_green.png");
     yellow_house_texture.loadFromFile("../assets/house_yellow.png");
 
+    sf::Texture fire_texture;
+    fire_texture.loadFromFile("../assets/Fiyah.png");
 
     sf::Texture background_texture;
     background_texture.loadFromFile("../assets/background.png");
@@ -310,14 +346,12 @@ int main() {
         update_powerups(powerups, players);
 
         handle_item_stealing(players);
+        handle_fire(players);
 
         handle_stun(players);
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
-                p.score += ITEM_SCORE;
-
-                // defined in item.hpp
                 remove_item(items, p.carried_item);
                 p.carried_item = nullptr;
 
@@ -332,9 +366,9 @@ int main() {
                 if (empty_boxes > 0) {
                     p.boxes[available_indices[rand() % empty_boxes]].filled = true;
                 }
-            }
-            if (p.score >= WIN_SCORE) {
-                std::cout << "player " << p.index << " won the game" << std::endl;
+                if (empty_boxes == 1) {
+                    std::cout << "player " << p.index << " won the game" << std::endl;
+                }
             }
         }
 
@@ -353,13 +387,23 @@ int main() {
                     shape.setFillColor(sf::Color(200, 255, 255));
                     window.draw(shape);
                 }
+
+                if (box.on_fire) {
+                    sf::Sprite fire_sprite;
+                    fire_sprite.setTexture(fire_texture);
+                    float time = box.fire_clock.getElapsedTime().asSeconds() * 8;
+                    int frame = (int)time % 6;
+                    fire_sprite.setTextureRect(sf::IntRect(frame * 10, 0, 10, 13));
+                    fire_sprite.setPosition(box.shape.getPosition() + sf::Vector2f(5, 5));
+                    window.draw(fire_sprite);
+                }
             }
 
-            sf::Text text;
-            text.setFont(font);
-            text.setString(std::to_string(players[i].score));
-            text.setCharacterSize(50);
-            text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
+            // sf::Text text;
+            // text.setFont(font);
+            // text.setString(std::to_string(players[i].score));
+            // text.setCharacterSize(50);
+            // text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
             //window.draw(text);
         }
         for (auto p : players) {
