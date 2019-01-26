@@ -7,7 +7,6 @@ Player::Player(
     sf::Texture* texture,
     sf::Texture* house_texture
 ) : key_config{config}, index{index}, direction{Down}, shape{PLAYER_RADIUS} {
-    this->score = 0;
     this->stunned = false;
     this->moving = false;
     this->carried_item = nullptr;

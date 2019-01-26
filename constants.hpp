@@ -15,5 +15,11 @@ struct KeyConfig {
     sf::Keyboard::Key right;
 };
 
+struct PowerupTextures {
+    sf::Texture* speed;
+    sf::Texture* immunity;
+    sf::Texture* fire;
+};
+
 #endif /* ifndef CONSTANTS */
 
