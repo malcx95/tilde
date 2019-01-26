@@ -51,6 +51,20 @@ void handle_input(std::vector<Player>& players, float dt) {
         if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
             p.move(speed * dt, 0.f);
         }
+
+        // Check screen bounds
+        auto pos = p.shape.getPosition();
+        if (pos.x < 10) {
+            p.move(10 - pos.x, 0);
+        } else if (pos.x >= WINDOW_WIDTH - 10) {
+            p.move(WINDOW_WIDTH - 10 - pos.x, 0);
+        }
+
+        if (pos.y < 10) {
+            p.move(0, 10 - pos.y);
+        } else if (pos.y >= WINDOW_HEIGHT - 10) {
+            p.move(0, WINDOW_HEIGHT - 10 - pos.y);
+        }
     }
 }
 
