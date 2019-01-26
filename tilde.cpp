@@ -264,11 +264,20 @@ void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& playe
     }
 }
 
-void update_powerup_animations(std::vector<Powerup*>& powerups) {
+void update_powerup_animations(std::vector<Powerup*>& powerups, float dt) {
     for (Powerup* p : powerups) {
         if (!p->active) {
-            p->update_animation();
+            p->update_animation(dt);
         }
+    }
+}
+
+void handle_stealing_from_house(std::vector<Player>& players,
+        std::vector<Item*>& items) {
+    for (Player& p : players) {
+        if (p.powerup != nullptr &&
+                p.powerup->type != PowerupType::STEALING) continue;
+
     }
 }
 
@@ -368,7 +377,9 @@ int main() {
         handle_item_pickup(players, items);
         handle_powerup_pickup(powerups, players);
         update_powerups(powerups, players);
-        update_powerup_animations(powerups);
+        update_powerup_animations(powerups, dt);
+
+        handle_stealing_from_house(players, items);
 
         handle_item_stealing(players);
         handle_fire(players);
