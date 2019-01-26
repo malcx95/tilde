@@ -144,6 +144,18 @@ int main() {
                 // defined in item.hpp
                 remove_item(items, p.carried_item);
                 p.carried_item = nullptr;
+
+                // Fill a random box
+                std::vector<size_t> available_indices;
+                for (size_t i = 0; i < p.boxes.size(); i++) {
+                    if (!p.boxes[i].filled) {
+                        available_indices.push_back(i);
+                    }
+                }
+                size_t empty_boxes = available_indices.size();
+                if (empty_boxes > 1) {
+                    p.boxes[available_indices[rand() % empty_boxes]].filled = true;
+                }
             }
             if (p.score >= WIN_SCORE) {
                 std::cout << "player " << p.index << " won the game" << std::endl;
@@ -155,11 +167,22 @@ int main() {
         for (int i = 0; i < 4; i++) {
             window.draw(players[i].house);
 
+            for (auto box : players[i].boxes) {
+                window.draw(box.shape);
+
+                if (box.filled) {
+                    sf::CircleShape shape(10, 3);
+                    shape.setPosition(box.shape.getPosition());
+                    shape.setFillColor(sf::Color(200, 255, 255));
+                    window.draw(shape);
+                }
+            }
+
             sf::Text text;
             text.setFont(font);
             text.setString(std::to_string(players[i].score));
             text.setCharacterSize(50);
-            text.setPosition(players[i].house.getPosition());
+            text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
             window.draw(text);
         }
         for (auto p : players) {
