@@ -35,20 +35,21 @@ KeyConfig PLAYER_KEYS[] = {
 
 void handle_input(std::vector<Player>& players, float dt) {
     for (Player& p : players) {
-        if(p.stunned) {
-            continue;
-        }
+        if (p.stunned) continue;
+
+        float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
+
         if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
-            p.move(0.f, -PLAYER_SPEED * dt);
+            p.move(0.f, -speed * dt);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
-            p.move(0.f, PLAYER_SPEED * dt);
+            p.move(0.f, speed * dt);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
-            p.move(-PLAYER_SPEED * dt, 0.f);
+            p.move(-speed * dt, 0.f);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
-            p.move(PLAYER_SPEED * dt, 0.f);
+            p.move(speed * dt, 0.f);
         }
     }
 }
@@ -99,7 +100,6 @@ void handle_item_stealing(std::vector<Player>& players) {
 void handle_stun(std::vector<Player>& players) {
     for (Player& p : players) {
         if (p.stunned) {
-            std::cout << p.index << ":" << p.stun_clock.getElapsedTime().asSeconds() << std::endl;
             if (p.stun_clock.getElapsedTime().asSeconds() >= STUN_TIME) {
                 p.stunned = false;
             }
@@ -126,24 +126,24 @@ int main() {
         WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
     };
 
-    float spawnInterval = 5.0f;
+    float spawn_interval = 5.0f;
     std::vector<Item*> items;
 
-    sf::Clock deltaClock;
-    sf::Clock spawnClock;
+    sf::Clock delta_clock;
+    sf::Clock spawn_clock;
 
     while (window.isOpen()) {
-        float dt = deltaClock.restart().asSeconds();
+        float dt = delta_clock.restart().asSeconds();
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
         }
 
-        if (spawnClock.getElapsedTime().asSeconds() > spawnInterval) {
+        if (spawn_clock.getElapsedTime().asSeconds() > spawn_interval) {
             // defined in item.hpp
             spawn_item(items);
-            spawnClock.restart();
+            spawn_clock.restart();
         }
 
         handle_input(players, dt);
