@@ -1,17 +1,20 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include "config.h"
 #include "player.hpp"
 #include "constants.hpp"
+#include "powerup.hpp"
 #include "item.hpp"
 
 const unsigned int ITEM_SCORE = 10;
-const unsigned int NUM_PLAYERS = 4;
 const float PLAYER_SPEED = 80.f;
 const int WIN_SCORE = 100;
+const float ITEM_SPAWN_INTERVAL = 5.0f;
+const float POWERUP_SPAWN_INTERVAL = 1.0;
 const float STUN_TIME = 3;
 
 
@@ -35,21 +38,59 @@ KeyConfig PLAYER_KEYS[] = {
 
 void handle_input(std::vector<Player>& players, float dt) {
     for (Player& p : players) {
-        if (p.stunned) continue;
+        if (p.stunned) {
+            p.moving = false;
+            continue;
+        }
+
+        sf::Vector2f dir;
+        if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
+            dir.y -= 1;
+        }
+        if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
+            dir.y += 1;
+        }
+        if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
+            dir.x -= 1;
+        }
+        if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
+            dir.x += 1;
+        }
 
         float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
 
-        if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
-            p.move(0.f, -speed * dt);
+        if (p.powerup != nullptr && p.powerup->type == PowerupType::FASTER) {
+            speed *= SPEED_INCREASE;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
-            p.move(0.f, speed * dt);
+
+        auto movement = dir * speed * dt;
+        p.move(movement.x, movement.y);
+
+        // Change character direction if moving
+        if (dir.y < 0) {
+            p.direction = Up;
+        } else if (dir.y > 0) {
+            p.direction = Down;
+        } else if (dir.x < 0) {
+            p.direction = Left;
+        } else if (dir.x > 0) {
+            p.direction = Right;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
-            p.move(-speed * dt, 0.f);
+
+        p.moving = dir.x != 0 || dir.y != 0;
+
+        // Check screen bounds
+        auto pos = p.sprite.getPosition();
+        if (pos.x < 10) {
+            p.move(10 - pos.x, 0);
+        } else if (pos.x >= WINDOW_WIDTH - 10) {
+            p.move(WINDOW_WIDTH - 10 - pos.x, 0);
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
-            p.move(speed * dt, 0.f);
+
+        if (pos.y < 10) {
+            p.move(0, 10 - pos.y);
+        } else if (pos.y >= WINDOW_HEIGHT - 10) {
+            p.move(0, WINDOW_HEIGHT - 10 - pos.y);
         }
     }
 }
@@ -59,14 +100,15 @@ void handle_item_pickup(std::vector<Player>& players,
                         std::vector<Item*>& items) {
     for (Player& p : players) {
         if (p.carried_item == nullptr) {
-            auto boundingBox = p.shape.getGlobalBounds();
+            auto boundingBox = p.sprite.getGlobalBounds();
             for (Item* item : items) {
 
-                if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
+                if (!item->being_carried && 
+                        boundingBox.intersects(item->shape.getGlobalBounds())) {
                     p.carried_item = item;
 
                     // TODO maybe remove
-                    item->shape.setPosition(p.shape.getPosition());
+                    item->shape.setPosition(p.sprite.getPosition());
                     item->being_carried = true;
                     break;
                 }
@@ -78,15 +120,19 @@ void handle_item_pickup(std::vector<Player>& players,
 
 void handle_item_stealing(std::vector<Player>& players) {
     for (Player& p : players) {
-        auto player_bounds = p.shape.getGlobalBounds();
+        if (p.powerup != nullptr &&
+                p.powerup->type == PowerupType::IMMUNITY) {
+            continue;
+        }
+        auto player_bounds = p.sprite.getGlobalBounds();
 
         for (Player& enemy : players) {
             if (p.index == enemy.index) continue;
 
-            if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
-                if (p.carried_item != nullptr && !enemy.stunned) {
+            if (player_bounds.intersects(enemy.sprite.getGlobalBounds())) {
+                if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
-                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
+                    enemy.carried_item->shape.setPosition(enemy.sprite.getPosition());
                     p.carried_item = nullptr;
 
                     p.stun_clock.restart().asSeconds();
@@ -107,12 +153,89 @@ void handle_stun(std::vector<Player>& players) {
     }
 }
 
+void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
+    size_t index = 0;
+    for (size_t i = 0; i < powerups.size(); ++i) {
+        if (powerups[i] == powerup) {
+            index = i;
+            break;
+        }
+    }
+    powerups.erase(powerups.begin() + index);
+    delete powerup;
+}
+
+bool is_free_to_place(Powerup* powerup, 
+        std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.house.getGlobalBounds().intersects(
+                    powerup->shape.getGlobalBounds())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void spawn_powerup(std::vector<Powerup*>& powerups, 
+        std::vector<Player>& players) {
+    if (powerups.size() < MAX_NUM_POWERUPS) {
+        PowerupType type = (PowerupType)(rand() % NUM_POWERUP_TYPES);
+        Powerup* p = new Powerup{type, sf::Vector2f{0, 0}};
+        unsigned int rand_x;
+        unsigned int rand_y;
+        do {
+            rand_x = (unsigned int)(rand() % WINDOW_WIDTH);
+            rand_y = (unsigned int)(rand() % WINDOW_HEIGHT);
+            p->shape.setPosition(rand_x, rand_y);
+        } while (!is_free_to_place(p, players));
+        powerups.push_back(p);
+    }
+}
+
+void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.powerup == nullptr) {
+            auto bb = p.sprite.getGlobalBounds();
+            for (Powerup* powerup : powerups) {
+
+                if (!powerup->active && 
+                        bb.intersects(powerup->shape.getGlobalBounds())) {
+                    p.powerup = powerup;
+                    p.powerup->activate();
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.powerup == nullptr) continue;
+        if (p.powerup->should_deactivate()) {
+            remove_powerup(powerups, p.powerup);
+            p.powerup = nullptr;
+        }
+    }
+}
+
 int main() {
     srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
 
     sf::Font font;
-    font.loadFromFile("arial.ttf");
+    font.loadFromFile("../arial.ttf");
+
+    // These need to stay alive for the entire game or players will be drawn
+    // as white squares
+    sf::Texture red_texture;
+    sf::Texture green_texture;
+    sf::Texture blue_texture;
+    sf::Texture yellow_texture;
+    red_texture.loadFromFile("../red_player.png");
+    green_texture.loadFromFile("../green_player.png");
+    blue_texture.loadFromFile("../blue_player.png");
+    yellow_texture.loadFromFile("../yellow_player.png");
 
     sf::Texture background_texture;
     background_texture.loadFromFile("assets/background.png");
@@ -124,21 +247,22 @@ int main() {
 
     std::vector<Player> players = {
         Player(0, sf::Color(255, 100, 100), PLAYER_KEYS[0],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}),
+                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture),
         Player(1, sf::Color(100, 255, 100), PLAYER_KEYS[1],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}),
+                sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture),
         Player(2, sf::Color(100, 100, 255), PLAYER_KEYS[2],
-                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}),
+                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture),
         Player(3, sf::Color(255, 255, 100), PLAYER_KEYS[3],
                 sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
-        WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
+        WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture)
     };
 
-    float spawn_interval = 5.0f;
     std::vector<Item*> items;
+    std::vector<Powerup*> powerups;
 
     sf::Clock delta_clock;
     sf::Clock spawn_clock;
+    sf::Clock powerup_clock;
 
     while (window.isOpen()) {
         float dt = delta_clock.restart().asSeconds();
@@ -148,15 +272,23 @@ int main() {
                 window.close();
         }
 
-        if (spawn_clock.getElapsedTime().asSeconds() > spawn_interval) {
+        if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
             // defined in item.hpp
             spawn_item(items);
             spawn_clock.restart();
         }
 
+        if (powerup_clock.getElapsedTime().asSeconds() > POWERUP_SPAWN_INTERVAL) {
+            // defined in item.hpp
+            spawn_powerup(powerups, players);
+            powerup_clock.restart();
+        }
+
         handle_input(players, dt);
 
         handle_item_pickup(players, items);
+        handle_powerup_pickup(powerups, players);
+        update_powerups(powerups, players);
 
         handle_item_stealing(players);
 
@@ -169,6 +301,18 @@ int main() {
                 // defined in item.hpp
                 remove_item(items, p.carried_item);
                 p.carried_item = nullptr;
+
+                // Fill a random box
+                std::vector<size_t> available_indices;
+                for (size_t i = 0; i < p.boxes.size(); i++) {
+                    if (!p.boxes[i].filled) {
+                        available_indices.push_back(i);
+                    }
+                }
+                size_t empty_boxes = available_indices.size();
+                if (empty_boxes > 1) {
+                    p.boxes[available_indices[rand() % empty_boxes]].filled = true;
+                }
             }
             if (p.score >= WIN_SCORE) {
                 std::cout << "player " << p.index << " won the game" << std::endl;
@@ -181,18 +325,43 @@ int main() {
         for (int i = 0; i < 4; i++) {
             window.draw(players[i].house);
 
+            for (auto box : players[i].boxes) {
+                window.draw(box.shape);
+
+                if (box.filled) {
+                    sf::CircleShape shape(10, 3);
+                    shape.setPosition(box.shape.getPosition());
+                    shape.setFillColor(sf::Color(200, 255, 255));
+                    window.draw(shape);
+                }
+            }
+
             sf::Text text;
             text.setFont(font);
             text.setString(std::to_string(players[i].score));
             text.setCharacterSize(50);
-            text.setPosition(players[i].house.getPosition());
+            text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
             window.draw(text);
         }
         for (auto p : players) {
-            window.draw(p.shape);
+            float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
+            int frame = (int)time % 4;
+            if (frame == 3) {
+                frame = 1; // To get ping pong effect
+            }
+            if (!p.moving) {
+                frame = 1;
+            }
+            p.sprite.setTextureRect(sf::IntRect(frame * 16, (int)p.direction * 18, 16, 18));
+            window.draw(p.sprite);
         }
         for (auto item : items) {
             window.draw(item->shape);
+        }
+        for (auto powerup : powerups) {
+            if (!powerup->active) {
+                window.draw(powerup->shape);
+            }
         }
 
         window.display();
