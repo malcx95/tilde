@@ -22,25 +22,25 @@ Player::Player(
     auto player_pos = house_pos + sf::Vector2f(HOUSE_WIDTH / 2, HOUSE_HEIGHT / 2);
     this->sprite.setPosition(player_pos);
 
-    const unsigned int item_spacing = 40;
     for (unsigned int i = 0; i < NUM_BOXES; i++) {
         boxes.push_back(Box{sf::Vector2f(20, 20)});
         boxes[i].shape.setFillColor(sf::Color(50, 50, 50));
 
         if (i < NUM_BOXES / 2) {
-            sf::Vector2f offset(10 + i * item_spacing, 10);
+            sf::Vector2f offset(10 + i * ITEM_SPACING, 10);
             boxes[i].shape.setPosition(house_pos + offset);
         } else {
-            sf::Vector2f offset(10 + (i - NUM_BOXES / 2) * item_spacing, HOUSE_HEIGHT - 30);
+            sf::Vector2f offset(10 + (i - NUM_BOXES / 2) * ITEM_SPACING, HOUSE_HEIGHT - 30);
             boxes[i].shape.setPosition(house_pos + offset);
         }
     }
 }
 
 void Player::set_position(sf::Vector2f position) {
-    // if (this->powerup != nullptr) {
-    //     this->powerup->shape.setPosition(position);
-    // }
+    if (this->powerup != nullptr) {
+        this->powerup->bar.set_position(position - sf::Vector2f{0, 
+                PROGRESSBAR_DISTANCE});
+    }
     if (this->carried_item != nullptr) {
         this->carried_item->shape.setPosition(position);
     }
@@ -48,9 +48,9 @@ void Player::set_position(sf::Vector2f position) {
 }
 
 void Player::move(float dx, float dy) {
-    // if (this->powerup != nullptr) {
-    //     this->powerup->shape.move(dx, dy);
-    // }
+    if (this->powerup != nullptr) {
+        this->powerup->bar.move(dx, dy);
+    }
     if (this->carried_item != nullptr) {
         this->carried_item->shape.move(dx, dy);
     }
