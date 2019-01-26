@@ -168,7 +168,7 @@ void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
 bool is_free_to_place(Powerup* powerup, 
         std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.house.getGlobalBounds().intersects(
+        if (p.house_sprite.getGlobalBounds().intersects(
                     powerup->shape.getGlobalBounds())) {
             return false;
         }
@@ -195,7 +195,7 @@ void spawn_powerup(std::vector<Powerup*>& powerups,
 void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
     for (Player& p : players) {
         if (p.powerup == nullptr) {
-            auto bb = p.sprite.getGlobalBounds();
+            auto bb = p.shape.getGlobalBounds();
             for (Powerup* powerup : powerups) {
 
                 if (!powerup->active && 
@@ -258,16 +258,18 @@ int main() {
     background_sprite.setTextureRect(sf::IntRect(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
     background_sprite.setTexture(background_texture);
 
+    float house_height = red_house_texture.getSize().y;
+    float house_width = red_house_texture.getSize().x;
     std::vector<Player> players = {
         Player(0, PLAYER_KEYS[0],
                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
         Player(1, PLAYER_KEYS[1],
-               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture, &green_house_texture),
+               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
         Player(2, PLAYER_KEYS[2],
-               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
+               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
         Player(3, PLAYER_KEYS[3],
-               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
-                                WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
+               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
+                                WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
     };
 
     std::vector<Item*> items;
@@ -353,7 +355,7 @@ int main() {
             text.setFont(font);
             text.setString(std::to_string(players[i].score));
             text.setCharacterSize(50);
-            text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
+            text.setPosition(players[i].house_sprite.getPosition() + sf::Vector2f(0, 15));
             //window.draw(text);
         }
         for (auto p : players) {
