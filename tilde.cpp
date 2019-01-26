@@ -109,11 +109,11 @@ void handle_item_pickup(std::vector<Player>& players,
             for (Item* item : items) {
 
                 if (!item->being_carried &&
-                        boundingBox.intersects(item->shape.getGlobalBounds())) {
+                        boundingBox.intersects(item->sprite.getGlobalBounds())) {
                     p.carried_item = item;
 
                     // TODO maybe remove
-                    item->shape.setPosition(p.sprite.getPosition());
+                    item->sprite.setPosition(p.sprite.getPosition());
                     item->being_carried = true;
                     break;
                 }
@@ -137,7 +137,7 @@ void handle_item_stealing(std::vector<Player>& players) {
             if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
                 if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
-                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
+                    enemy.carried_item->sprite.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
 
                     p.stun_clock.restart().asSeconds();
@@ -311,6 +311,22 @@ int main() {
     powerup_textures.immunity = &immunity_texture;
     powerup_textures.fire = &fire_texture;
 
+    sf::Texture chair_texture;
+    sf::Texture fridge_texture;
+    sf::Texture tv_texture;
+    sf::Texture plant_texture;
+    chair_texture.loadFromFile("../assets/chair.png");
+    fridge_texture.loadFromFile("../assets/fridge.png");
+    tv_texture.loadFromFile("../assets/tv.png");
+    plant_texture.loadFromFile("../assets/plant.png");
+
+    std::vector<sf::Texture*> item_textures = {
+        &chair_texture,
+        &fridge_texture,
+        &tv_texture,
+        &plant_texture
+    };
+
     sf::Texture burning_texture;
     burning_texture.loadFromFile("../assets/Fiyah.png");
 
@@ -354,7 +370,7 @@ int main() {
         }
 
         if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
-            spawn_item(items);
+            spawn_item(items, item_textures);
             spawn_clock.restart();
         }
 
@@ -398,6 +414,11 @@ int main() {
             }
         }
 
+        struct PowerupTextures {
+            sf::Texture* speed;
+            sf::Texture* immunity;
+            sf::Texture* fire;
+        };
         // Drawing
         window.clear(sf::Color::Black);
         window.draw(background_sprite);
@@ -438,7 +459,7 @@ int main() {
             window.draw(p.sprite);
         }
         for (auto item : items) {
-            window.draw(item->shape);
+            window.draw(item->sprite);
         }
         for (auto powerup : powerups) {
             if (!powerup->active) {

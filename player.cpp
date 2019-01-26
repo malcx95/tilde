@@ -41,7 +41,7 @@ void Player::set_position(sf::Vector2f position) {
                 PROGRESSBAR_DISTANCE});
     }
     if (this->carried_item != nullptr) {
-        this->carried_item->shape.setPosition(position);
+        this->carried_item->sprite.setPosition(position);
     }
     this->sprite.setPosition(position);
     this->shape.setPosition(position);
@@ -52,7 +52,7 @@ void Player::move(float dx, float dy) {
         this->powerup->bar.move(dx, dy);
     }
     if (this->carried_item != nullptr) {
-        this->carried_item->shape.move(dx, dy);
+        this->carried_item->sprite.move(dx, dy);
     }
     this->sprite.move(dx, dy);
     this->shape.move(dx, dy);
