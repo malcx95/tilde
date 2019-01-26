@@ -1,6 +1,8 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
+#include <stdlib.h>
+#include <time.h>
 #include "config.h"
 #include "player.hpp"
 #include "constants.hpp"
@@ -36,6 +38,7 @@ KeyConfig PLAYER_KEYS[] = {
 
 
 int main() {
+    srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
 
     sf::Font font;
@@ -49,7 +52,7 @@ int main() {
         WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
     };
 
-    float spawnInterval = 1.0f;
+    float spawnInterval = 5.0f;
     std::vector<Item*> items;
 
     sf::Clock deltaClock;
