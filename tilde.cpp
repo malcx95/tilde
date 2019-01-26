@@ -110,24 +110,24 @@ int main() {
         WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
     };
 
-    float spawnInterval = 5.0f;
+    float spawn_interval = 5.0f;
     std::vector<Item*> items;
 
-    sf::Clock deltaClock;
-    sf::Clock spawnClock;
+    sf::Clock delta_clock;
+    sf::Clock spawn_clock;
 
     while (window.isOpen()) {
-        float dt = deltaClock.restart().asSeconds();
+        float dt = delta_clock.restart().asSeconds();
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
         }
 
-        if (spawnClock.getElapsedTime().asSeconds() > spawnInterval) {
+        if (spawn_clock.getElapsedTime().asSeconds() > spawn_interval) {
             // defined in item.hpp
             spawn_item(items);
-            spawnClock.restart();
+            spawn_clock.restart();
         }
 
         handle_input(players, dt);
