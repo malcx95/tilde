@@ -6,9 +6,10 @@ Player::Player(
     KeyConfig config,
     sf::Vector2f house_pos,
     sf::Texture* texture
-) : key_config{config}, index{index}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
+) : key_config{config}, index{index}, direction{Down}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
     this->score = 0;
     this->stunned = false;
+    this->moving = false;
     this->carried_item = nullptr;
     this->powerup = nullptr;
 
@@ -18,8 +19,6 @@ Player::Player(
 
     this->sprite.setTexture(*texture);
     this->sprite.setOrigin(8, 8);
-    this->sprite.setTextureRect(sf::IntRect(0, 18 * 2, 16, 18));
-    //this->shape.setFillColor(color);
     auto player_pos = house_pos + sf::Vector2f(HOUSE_WIDTH / 2, HOUSE_HEIGHT / 2);
     this->sprite.setPosition(player_pos);
 

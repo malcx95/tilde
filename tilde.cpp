@@ -38,7 +38,10 @@ KeyConfig PLAYER_KEYS[] = {
 
 void handle_input(std::vector<Player>& players, float dt) {
     for (Player& p : players) {
-        if (p.stunned) continue;
+        if (p.stunned) {
+            p.moving = false;
+            continue;
+        }
 
         sf::Vector2f dir;
         if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
@@ -73,6 +76,8 @@ void handle_input(std::vector<Player>& players, float dt) {
         } else if (dir.x > 0) {
             p.direction = Right;
         }
+
+        p.moving = dir.x != 0 || dir.y != 0;
 
         // Check screen bounds
         auto pos = p.sprite.getPosition();
@@ -330,7 +335,15 @@ int main() {
             window.draw(text);
         }
         for (auto p : players) {
-            p.sprite.setTextureRect(sf::IntRect(0, (int)p.direction * 18, 16, 18));
+            float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
+            int frame = (int)time % 4;
+            if (frame == 3) {
+                frame = 1; // To get ping pong effect
+            }
+            if (!p.moving) {
+                frame = 1;
+            }
+            p.sprite.setTextureRect(sf::IntRect(frame * 16, (int)p.direction * 18, 16, 18));
             window.draw(p.sprite);
         }
         for (auto item : items) {
