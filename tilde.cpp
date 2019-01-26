@@ -98,7 +98,7 @@ void handle_item_stealing(std::vector<Player>& players) {
             if (p.index == enemy.index) continue;
 
             if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
-                if (p.carried_item != nullptr && !enemy.stunned) {
+                if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
                     enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
