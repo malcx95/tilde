@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include "config.h"
@@ -37,23 +38,37 @@ void handle_input(std::vector<Player>& players, float dt) {
     for (Player& p : players) {
         if (p.stunned) continue;
 
-        float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
-
+        sf::Vector2f dir;
         if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
-            p.move(0.f, -speed * dt);
+            dir.y -= 1;
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
-            p.move(0.f, speed * dt);
+            dir.y += 1;
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
-            p.move(-speed * dt, 0.f);
+            dir.x -= 1;
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
-            p.move(speed * dt, 0.f);
+            dir.x += 1;
+        }
+
+        float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
+        auto movement = dir * speed * dt;
+        p.move(movement.x, movement.y);
+
+        // Change character direction if moving
+        if (dir.y < 0) {
+            p.direction = Up;
+        } else if (dir.y > 0) {
+            p.direction = Down;
+        } else if (dir.x < 0) {
+            p.direction = Left;
+        } else if (dir.x > 0) {
+            p.direction = Right;
         }
 
         // Check screen bounds
-        auto pos = p.shape.getPosition();
+        auto pos = p.sprite.getPosition();
         if (pos.x < 10) {
             p.move(10 - pos.x, 0);
         } else if (pos.x >= WINDOW_WIDTH - 10) {
@@ -73,14 +88,14 @@ void handle_item_pickup(std::vector<Player>& players,
                         std::vector<Item*>& items) {
     for (Player& p : players) {
         if (p.carried_item == nullptr) {
-            auto boundingBox = p.shape.getGlobalBounds();
+            auto boundingBox = p.sprite.getGlobalBounds();
             for (Item* item : items) {
 
                 if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
                     p.carried_item = item;
 
                     // TODO maybe remove
-                    item->shape.setPosition(p.shape.getPosition());
+                    item->shape.setPosition(p.sprite.getPosition());
                     item->being_carried = true;
                     break;
                 }
@@ -92,15 +107,15 @@ void handle_item_pickup(std::vector<Player>& players,
 
 void handle_item_stealing(std::vector<Player>& players) {
     for (Player& p : players) {
-        auto player_bounds = p.shape.getGlobalBounds();
+        auto player_bounds = p.sprite.getGlobalBounds();
 
         for (Player& enemy : players) {
             if (p.index == enemy.index) continue;
 
-            if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
+            if (player_bounds.intersects(enemy.sprite.getGlobalBounds())) {
                 if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
-                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
+                    enemy.carried_item->shape.setPosition(enemy.sprite.getPosition());
                     p.carried_item = nullptr;
 
                     p.stun_clock.restart().asSeconds();
@@ -126,18 +141,29 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
 
     sf::Font font;
-    font.loadFromFile("arial.ttf");
+    font.loadFromFile("../arial.ttf");
+
+    // These need to stay alive for the entire game or players will be drawn
+    // as white squares
+    sf::Texture red_texture;
+    sf::Texture green_texture;
+    sf::Texture blue_texture;
+    sf::Texture yellow_texture;
+    red_texture.loadFromFile("../red_player.png");
+    green_texture.loadFromFile("../green_player.png");
+    blue_texture.loadFromFile("../blue_player.png");
+    yellow_texture.loadFromFile("../yellow_player.png");
 
     std::vector<Player> players = {
         Player(0, sf::Color(255, 100, 100), PLAYER_KEYS[0],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}),
+                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture),
         Player(1, sf::Color(100, 255, 100), PLAYER_KEYS[1],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}),
+                sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture),
         Player(2, sf::Color(100, 100, 255), PLAYER_KEYS[2],
-                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}),
+                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture),
         Player(3, sf::Color(255, 255, 100), PLAYER_KEYS[3],
                 sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
-        WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
+        WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture)
     };
 
     float spawn_interval = 5.0f;
@@ -217,7 +243,8 @@ int main() {
             window.draw(text);
         }
         for (auto p : players) {
-            window.draw(p.shape);
+            p.sprite.setTextureRect(sf::IntRect(0, (int)p.direction * 18, 16, 18));
+            window.draw(p.sprite);
         }
         for (auto item : items) {
             window.draw(item->shape);
