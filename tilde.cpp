@@ -452,8 +452,8 @@ int main() {
             sf::Text text;
             text.setFont(font);
             text.setString(win_text);
-            text.setCharacterSize(100);
-            text.setPosition(sf::Vector2f(100, WINDOW_HEIGHT / 2));
+            text.setCharacterSize(60);
+            text.setPosition(sf::Vector2f(100, WINDOW_HEIGHT / 2 - 30));
             window.draw(text);
         }
 
