@@ -10,8 +10,6 @@ const unsigned int HOUSE_HEIGHT = 100;
 
 const unsigned int PLAYER_RADIUS = 10;
 
-const unsigned int STUN_TIME = 3;
-
 struct Player {
 
     Player(unsigned int index,
@@ -36,6 +34,8 @@ struct Player {
     void set_position(sf::Vector2f position);
     void move(float dx, float dy);
     bool is_home() const;
+
+    sf::Clock stun_clock;
 
 };
 
