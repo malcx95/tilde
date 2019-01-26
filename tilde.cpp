@@ -1,22 +1,16 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
-#include "config.h"
 #include "player.hpp"
 #include "constants.hpp"
 #include "item.hpp"
 
 const unsigned int ITEM_SCORE = 10;
+const unsigned int NUM_PLAYERS = 4;
+const float PLAYER_SPEED = 80.f;
 
-struct KeyConfig {
-    sf::Keyboard::Key up;
-    sf::Keyboard::Key down;
-    sf::Keyboard::Key left;
-    sf::Keyboard::Key right;
-};
 
 // SFML doesn't support scancodes...
-// #define COLEMAK
 #ifdef COLEMAK
 KeyConfig PLAYER_KEYS[] = {
     KeyConfig { sf::Keyboard::Up, sf::Keyboard::Down, sf::Keyboard::Left, sf::Keyboard::Right },
@@ -34,17 +28,60 @@ KeyConfig PLAYER_KEYS[] = {
 #endif
 
 
+void handle_input(std::vector<Player>& players, float dt) {
+    for (Player& p : players) {
+        if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
+            p.move(0.f, -PLAYER_SPEED * dt);
+        }
+        if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
+            p.move(0.f, PLAYER_SPEED * dt);
+        }
+        if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
+            p.move(-PLAYER_SPEED * dt, 0.f);
+        }
+        if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
+            p.move(PLAYER_SPEED * dt, 0.f);
+        }
+    }
+}
+
+
+void handle_item_pickup(std::vector<Player>& players, 
+        std::vector<Item*>& items) {
+    for (Player& p : players) {
+        if (p.carried_item == nullptr) {
+            auto boundingBox = p.shape.getGlobalBounds();
+            for (Item* item : items) {
+
+                if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
+                    p.carried_item = item;
+
+                    // TODO maybe remove
+                    item->shape.setPosition(p.shape.getPosition());
+                    item->being_carried = true;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
 
     sf::Font font;
     font.loadFromFile("arial.ttf");
 
-    Player players[] = {
-        Player(0, sf::Color(255, 100, 100), sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}),
-        Player(1, sf::Color(100, 255, 100), sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}),
-        Player(2, sf::Color(100, 100, 255), sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}),
-        Player(3, sf::Color(255, 255, 100), sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
+    std::vector<Player> players = {
+        Player(0, sf::Color(255, 100, 100), PLAYER_KEYS[0],
+                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}),
+        Player(1, sf::Color(100, 255, 100), PLAYER_KEYS[1],
+                sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}),
+        Player(2, sf::Color(100, 100, 255), PLAYER_KEYS[2],
+                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}),
+        Player(3, sf::Color(255, 255, 100), PLAYER_KEYS[3],
+                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
         WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
     };
 
@@ -68,36 +105,9 @@ int main() {
             spawnClock.restart();
         }
 
-        const float PLAYER_SPEED = 80.f;
-        for (size_t i = 0; i < 4; i++) {
-            if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].up)) {
-                players[i].move(0.f, -PLAYER_SPEED * dt);
-            }
-            if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].down)) {
-                players[i].move(0.f, PLAYER_SPEED * dt);
-            }
-            if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].left)) {
-                players[i].move(-PLAYER_SPEED * dt, 0.f);
-            }
-            if (sf::Keyboard::isKeyPressed(PLAYER_KEYS[i].right)) {
-                players[i].move(PLAYER_SPEED * dt, 0.f);
-            }
+        handle_input(players, dt);
 
-            if (players[i].carried_item == nullptr) {
-                auto boundingBox = players[i].shape.getGlobalBounds();
-                for (Item* item : items) {
-
-                    if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
-                        players[i].carried_item = item;
-
-                        // TODO maybe remove
-                        item->shape.setPosition(players[i].shape.getPosition());
-                        item->being_carried = true;
-                        break;
-                    }
-                }
-            }
-        }
+        handle_item_pickup(players, items);
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {

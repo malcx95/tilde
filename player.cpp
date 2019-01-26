@@ -2,7 +2,8 @@
 
 Player::Player(unsigned int index,
         sf::Color color,
-        sf::Vector2f house_pos) : index{index} { 
+        KeyConfig config,
+        sf::Vector2f house_pos) : key_config{config}, index{index} { 
     this->score = 0;
     this->stunned = false;
     this->carried_item = nullptr;

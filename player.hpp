@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include "item.hpp"
+#include "constants.hpp"
 
 const unsigned int HOUSE_WIDTH = 200;
 const unsigned int HOUSE_HEIGHT = 100;
@@ -13,7 +14,10 @@ struct Player {
 
     Player(unsigned int index, 
             sf::Color color,
+            KeyConfig config,
             sf::Vector2f house_pos);
+
+    KeyConfig key_config;
 
     unsigned int index;
 
