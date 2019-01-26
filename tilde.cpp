@@ -208,6 +208,8 @@ void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>&
                         bb.intersects(powerup->shape.getGlobalBounds())) {
                     p.powerup = powerup;
                     p.powerup->activate();
+                    p.powerup->bar.set_position(p.sprite.getPosition()
+                            + sf::Vector2f{-(float)PROGRESSBAR_WIDTH/2, PROGRESSBAR_DISTANCE});
                     break;
                 }
             }
@@ -218,6 +220,7 @@ void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>&
 void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
     for (Player& p : players) {
         if (p.powerup == nullptr) continue;
+        p.powerup->update_progress();
         if (p.powerup->should_deactivate()) {
             remove_powerup(powerups, p.powerup);
             p.powerup = nullptr;
@@ -377,6 +380,8 @@ int main() {
         for (auto powerup : powerups) {
             if (!powerup->active) {
                 window.draw(powerup->shape);
+            } else {
+                powerup->bar.draw(window);
             }
         }
 

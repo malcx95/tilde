@@ -13,6 +13,9 @@ const unsigned int PLAYER_RADIUS = 10;
 
 const unsigned int NUM_BOXES = 10;
 
+const unsigned int PROGRESSBAR_DISTANCE = 10;
+const unsigned int ITEM_SPACING = 40;
+
 struct Box {
     Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false} {}
     sf::RectangleShape shape;
