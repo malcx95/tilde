@@ -25,7 +25,7 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position, PowerupTextures poweru
             c = sf::Color{255, 200, 50};
             break;
         case PowerupType::STEALING:
-            //this->sprite.setTexture(*powerup_textures.fire);
+            this->sprite.setTexture(*powerup_textures.stealing);
             c = sf::Color{40, 240, 180};
             break;
     }

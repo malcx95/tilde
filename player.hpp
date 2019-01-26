@@ -14,11 +14,12 @@ const unsigned int PROGRESSBAR_DISTANCE = 10;
 const unsigned int ITEM_SPACING = 40;
 
 struct Box {
-    Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false}, on_fire{false} {}
+    Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false}, on_fire{false}, item{nullptr} {}
     sf::RectangleShape shape;
     sf::Clock fire_clock;
     bool filled;
     bool on_fire;
+    Item* item;
 };
 
 enum Direction { Up, Right, Down, Left };

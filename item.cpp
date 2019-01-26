@@ -3,8 +3,16 @@
 
 const int SPAWN_RADIUS = 150;
 
+unsigned int num_stationary_items(std::vector<Item*>& items) {
+    unsigned int res = 0;
+    for (Item* it : items) {
+        if (!it->being_carried) res++;
+    }
+    return res;
+}
+
 void spawn_item(std::vector<Item*>& items) {
-    if (items.size() < MAX_ITEMS) {
+    if (num_stationary_items(items) < MAX_ITEMS) {
         Item* item = new Item;
 
         sf::Vector2f center(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
@@ -22,6 +30,7 @@ void spawn_item(std::vector<Item*>& items) {
 
         item->shape = shape;
         item->being_carried = false;
+        item->in_box = false;
 
         items.push_back(item);
     }

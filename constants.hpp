@@ -19,6 +19,7 @@ struct PowerupTextures {
     sf::Texture* speed;
     sf::Texture* immunity;
     sf::Texture* fire;
+    sf::Texture* stealing;
 };
 
 #endif /* ifndef CONSTANTS */

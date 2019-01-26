@@ -109,6 +109,7 @@ void handle_item_pickup(std::vector<Player>& players,
             for (Item* item : items) {
 
                 if (!item->being_carried &&
+                        !item->in_box &&
                         boundingBox.intersects(item->shape.getGlobalBounds())) {
                     p.carried_item = item;
 
@@ -149,7 +150,7 @@ void handle_item_stealing(std::vector<Player>& players) {
     }
 }
 
-void handle_fire(std::vector<Player>& players) {
+void handle_fire(std::vector<Player>& players, std::vector<Item*>& items) {
     for (Player& p : players) {
         // Light items that player walks on
         if (p.powerup != nullptr && p.powerup->type == PowerupType::FIRE) {
@@ -178,6 +179,8 @@ void handle_fire(std::vector<Player>& players) {
                 if (box.fire_clock.getElapsedTime().asSeconds() > BURN_TIME) {
                     box.filled = false;
                     box.on_fire = false;
+                    remove_item(items, box.item);
+                    box.item = nullptr;
                 }
             }
         }
@@ -272,12 +275,27 @@ void update_powerup_animations(std::vector<Powerup*>& powerups, float dt) {
     }
 }
 
-void handle_stealing_from_house(std::vector<Player>& players,
-        std::vector<Item*>& items) {
+void handle_stealing_from_house(std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.powerup != nullptr &&
+        if (p.powerup == nullptr ||
                 p.powerup->type != PowerupType::STEALING) continue;
-
+        auto bb = p.shape.getGlobalBounds();
+        for (Player& enemy : players) {
+            for (Box& box: enemy.boxes) {
+                if (box.item != nullptr &&
+                    bb.intersects(box.item->shape.getGlobalBounds())) {
+                    box.filled = false;
+                    Item* item = box.item;
+                    box.item = nullptr;
+                    p.carried_item = item;
+                    item->shape.setOrigin(10, 10);
+                    item->being_carried = true;
+                    item->in_box = false;
+                    item->shape.setPosition(p.sprite.getPosition());
+                    return;
+                }
+            }
+        }
     }
 }
 
@@ -311,14 +329,17 @@ int main() {
     sf::Texture speed_texture;
     sf::Texture immunity_texture;
     sf::Texture fire_texture;
+    sf::Texture stealing_texture;
     speed_texture.loadFromFile("../assets/speed.png");
     immunity_texture.loadFromFile("../assets/immunity.png");
     fire_texture.loadFromFile("../assets/fire.png");
+    stealing_texture.loadFromFile("../assets/stealing.png");
 
     PowerupTextures powerup_textures;
     powerup_textures.speed = &speed_texture;
     powerup_textures.immunity = &immunity_texture;
     powerup_textures.fire = &fire_texture;
+    powerup_textures.stealing = &stealing_texture;
 
     sf::Texture burning_texture;
     burning_texture.loadFromFile("../assets/Fiyah.png");
@@ -379,17 +400,21 @@ int main() {
         update_powerups(powerups, players);
         update_powerup_animations(powerups, dt);
 
-        handle_stealing_from_house(players, items);
+        handle_stealing_from_house(players);
 
         handle_item_stealing(players);
-        handle_fire(players);
+        handle_fire(players, items);
 
         handle_stun(players);
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
-                remove_item(items, p.carried_item);
+                //remove_item(items, p.carried_item);
+                Item* item = p.carried_item;
                 p.carried_item = nullptr;
+
+                item->in_box = true;
+                item->being_carried = false;
 
                 // Fill a random box
                 std::vector<size_t> available_indices;
@@ -400,7 +425,12 @@ int main() {
                 }
                 size_t empty_boxes = available_indices.size();
                 if (empty_boxes > 0) {
-                    p.boxes[available_indices[rand() % empty_boxes]].filled = true;
+                    Box* b = &p.boxes[available_indices[rand() % empty_boxes]];
+                    item->shape.setOrigin(0, 0);
+                    item->shape.setPosition(
+                            b->shape.getPosition());
+                    b->filled = true;
+                    b->item = item;
                 }
                 if (empty_boxes == 1 && !game_finished) {
                     win_text = "player " + std::to_string(p.index) + " won the game!";
@@ -419,10 +449,7 @@ int main() {
                 window.draw(box.shape);
 
                 if (box.filled) {
-                    sf::CircleShape shape(10, 3);
-                    shape.setPosition(box.shape.getPosition());
-                    shape.setFillColor(sf::Color(200, 255, 255));
-                    window.draw(shape);
+                    window.draw(box.item->shape);
                 }
 
                 if (box.on_fire) {
@@ -449,7 +476,10 @@ int main() {
             window.draw(p.sprite);
         }
         for (auto item : items) {
-            window.draw(item->shape);
+            // we draw those in boxes earlier
+            if (!item->in_box) {
+                window.draw(item->shape);
+            }
         }
         for (auto powerup : powerups) {
             if (!powerup->active) {
