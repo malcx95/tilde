@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include "progressbar.hpp"
+#include "constants.hpp"
 
 const unsigned int NUM_POWERUP_TYPES = 3;
 enum PowerupType { IMMUNITY, FASTER, FIRE };
@@ -18,11 +19,9 @@ const float SPEED_INCREASE = 2.;
 
 struct Powerup {
 
-    Powerup(PowerupType type, sf::Vector2f position);
+    Powerup(PowerupType type, sf::Vector2f position, PowerupTextures powerup_textures);
 
     PowerupType type;
-
-    sf::CircleShape shape;
 
     sf::Clock clock;
 
@@ -35,6 +34,8 @@ struct Powerup {
     void activate();
 
     void update_progress();
+
+    sf::Sprite sprite;
 
 };
 

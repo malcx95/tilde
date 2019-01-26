@@ -175,7 +175,7 @@ bool is_free_to_place(Powerup* powerup,
         std::vector<Player>& players) {
     for (Player& p : players) {
         if (p.house.getGlobalBounds().intersects(
-                    powerup->shape.getGlobalBounds())) {
+                    powerup->sprite.getGlobalBounds())) {
             return false;
         }
     }
@@ -183,16 +183,17 @@ bool is_free_to_place(Powerup* powerup,
 }
 
 void spawn_powerup(std::vector<Powerup*>& powerups, 
-        std::vector<Player>& players) {
+                   std::vector<Player>& players, PowerupTextures powerup_textures) {
     if (powerups.size() < MAX_NUM_POWERUPS) {
         PowerupType type = (PowerupType)(rand() % NUM_POWERUP_TYPES);
-        Powerup* p = new Powerup{type, sf::Vector2f{0, 0}};
+        // TODO: fix
+        Powerup* p = new Powerup{type, sf::Vector2f{0, 0}, powerup_textures};
         unsigned int rand_x;
         unsigned int rand_y;
         do {
             rand_x = (unsigned int)(rand() % WINDOW_WIDTH);
             rand_y = (unsigned int)(rand() % WINDOW_HEIGHT);
-            p->shape.setPosition(rand_x, rand_y);
+            p->sprite.setPosition(rand_x, rand_y);
         } while (!is_free_to_place(p, players));
         powerups.push_back(p);
     }
@@ -205,7 +206,7 @@ void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>&
             for (Powerup* powerup : powerups) {
 
                 if (!powerup->active && 
-                        bb.intersects(powerup->shape.getGlobalBounds())) {
+                        bb.intersects(powerup->sprite.getGlobalBounds())) {
                     p.powerup = powerup;
                     p.powerup->activate();
                     p.powerup->bar.set_position(p.sprite.getPosition()
@@ -255,6 +256,15 @@ int main() {
     green_house_texture.loadFromFile("../assets/house_green.png");
     yellow_house_texture.loadFromFile("../assets/house_yellow.png");
 
+    sf::Texture speed_texture;
+    sf::Texture immunity_texture;
+
+    speed_texture.loadFromFile("../assets/speed.png");
+    immunity_texture.loadFromFile("../assets/immunity.png");
+
+    PowerupTextures powerup_textures;
+    powerup_textures.speed = &speed_texture;
+    powerup_textures.immunity = &immunity_texture;
 
     sf::Texture background_texture;
     background_texture.loadFromFile("../assets/background.png");
@@ -299,7 +309,7 @@ int main() {
 
         if (powerup_clock.getElapsedTime().asSeconds() > POWERUP_SPAWN_INTERVAL) {
             // defined in item.hpp
-            spawn_powerup(powerups, players);
+            spawn_powerup(powerups, players, powerup_textures);
             powerup_clock.restart();
         }
 
@@ -379,7 +389,7 @@ int main() {
         }
         for (auto powerup : powerups) {
             if (!powerup->active) {
-                window.draw(powerup->shape);
+                window.draw(powerup->sprite);
             } else {
                 powerup->bar.draw(window);
             }

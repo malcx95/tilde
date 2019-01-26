@@ -4,21 +4,21 @@
 #include "player.hpp"
 #include <iostream>
 
-Powerup::Powerup(PowerupType type, sf::Vector2f position)
-    : type{type}, shape{sf::CircleShape{POWERUP_WIDTH, 8}}, 
-      bar{PROGRESSBAR_WIDTH, PROGRESSBAR_HEIGHT} {
-    this->shape.setPosition(position);
+Powerup::Powerup(PowerupType type, sf::Vector2f position, PowerupTextures powerup_textures)
+    : type{type}, bar{PROGRESSBAR_WIDTH, PROGRESSBAR_HEIGHT} {
+    this->sprite.setPosition(position);
     this->active = false;
     sf::Color c;
     switch (type) {
         case PowerupType::FASTER:
+            this->sprite.setTexture(*powerup_textures.speed);
             c = sf::Color{255, 50, 50};
             break;
         case PowerupType::IMMUNITY:
+            this->sprite.setTexture(*powerup_textures.immunity);
             c = sf::Color{255, 0, 255};
             break;
     }
-    this->shape.setFillColor(c);
     this->bar.set_colors(c, sf::Color{50, 50, 50});
 }
 
