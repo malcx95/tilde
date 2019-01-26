@@ -4,8 +4,9 @@ Player::Player(
     unsigned int index,
     sf::Color color,
     KeyConfig config,
-    sf::Vector2f house_pos
-) : key_config{config}, index{index}, shape{PLAYER_RADIUS}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
+    sf::Vector2f house_pos,
+    sf::Texture* texture
+) : key_config{config}, index{index}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
     this->score = 0;
     this->stunned = false;
     this->carried_item = nullptr;
@@ -15,10 +16,12 @@ Player::Player(
     this->house.setFillColor(
         sf::Color(100 + color.r * 0.2, 100 + color.g * 0.2, 100 + color.b * 0.2));
 
-    this->shape.setOrigin(10, 10);
-    this->shape.setFillColor(color);
+    this->sprite.setTexture(*texture);
+    this->sprite.setOrigin(8, 8);
+    this->sprite.setTextureRect(sf::IntRect(0, 18 * 2, 16, 18));
+    //this->shape.setFillColor(color);
     auto player_pos = house_pos + sf::Vector2f(HOUSE_WIDTH / 2, HOUSE_HEIGHT / 2);
-    this->shape.setPosition(player_pos);
+    this->sprite.setPosition(player_pos);
 
     const unsigned int item_spacing = 40;
     for (unsigned int i = 0; i < NUM_BOXES; i++) {
@@ -42,7 +45,7 @@ void Player::set_position(sf::Vector2f position) {
     if (this->carried_item != nullptr) {
         this->carried_item->shape.setPosition(position);
     }
-    this->shape.setPosition(position);
+    this->sprite.setPosition(position);
 }
 
 void Player::move(float dx, float dy) {
@@ -52,11 +55,11 @@ void Player::move(float dx, float dy) {
     if (this->carried_item != nullptr) {
         this->carried_item->shape.move(dx, dy);
     }
-    this->shape.move(dx, dy);
+    this->sprite.move(dx, dy);
 }
 
 bool Player::is_home() const {
     auto house_bb = this->house.getGlobalBounds();
-    return house_bb.intersects(this->shape.getGlobalBounds());
+    return house_bb.intersects(this->sprite.getGlobalBounds());
 }
 

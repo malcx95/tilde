@@ -19,27 +19,26 @@ struct Box {
     bool filled;
 };
 
-struct Player {
+enum Direction { Up, Right, Down, Left };
 
-    Player(unsigned int index,
-            sf::Color color,
-            KeyConfig config,
-            sf::Vector2f house_pos);
+struct Player {
+    Player(
+        unsigned int index,
+        sf::Color color,
+        KeyConfig config,
+        sf::Vector2f house_pos,
+        sf::Texture* texture
+    );
 
     KeyConfig key_config;
-
     unsigned int index;
-
     int score;
-
     bool stunned;
+    Direction direction;
 
-    sf::CircleShape shape;
-
+    sf::Sprite sprite;
     sf::RectangleShape house;
-
     std::vector<Box> boxes;
-
     Item* carried_item;
 
     Powerup* powerup;
