@@ -1,23 +1,38 @@
 #include "player.hpp"
 
-Player::Player(unsigned int index,
-        sf::Color color,
-        KeyConfig config,
-        sf::Vector2f house_pos) : key_config{config}, index{index} { 
+Player::Player(
+    unsigned int index,
+    sf::Color color,
+    KeyConfig config,
+    sf::Vector2f house_pos
+) : key_config{config}, index{index}, shape{PLAYER_RADIUS}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
     this->score = 0;
     this->stunned = false;
     this->carried_item = nullptr;
     this->powerup = nullptr;
 
-    this->house = sf::RectangleShape{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}};
     this->house.setPosition(house_pos);
-    this->house.setFillColor(sf::Color(100, 100, 100));
+    this->house.setFillColor(
+        sf::Color(100 + color.r * 0.2, 100 + color.g * 0.2, 100 + color.b * 0.2));
 
-    this->shape = sf::CircleShape{PLAYER_RADIUS};
     this->shape.setOrigin(10, 10);
     this->shape.setFillColor(color);
     auto player_pos = house_pos + sf::Vector2f(HOUSE_WIDTH / 2, HOUSE_HEIGHT / 2);
     this->shape.setPosition(player_pos);
+
+    const unsigned int item_spacing = 40;
+    for (unsigned int i = 0; i < NUM_BOXES; i++) {
+        boxes.push_back(Box{sf::Vector2f(20, 20)});
+        boxes[i].shape.setFillColor(sf::Color(50, 50, 50));
+
+        if (i < NUM_BOXES / 2) {
+            sf::Vector2f offset(10 + i * item_spacing, 10);
+            boxes[i].shape.setPosition(house_pos + offset);
+        } else {
+            sf::Vector2f offset(10 + (i - NUM_BOXES / 2) * item_spacing, HOUSE_HEIGHT - 30);
+            boxes[i].shape.setPosition(house_pos + offset);
+        }
+    }
 }
 
 void Player::set_position(sf::Vector2f position) {

@@ -14,6 +14,7 @@ const float PLAYER_SPEED = 80.f;
 const int WIN_SCORE = 100;
 const float ITEM_SPAWN_INTERVAL = 5.0f;
 const float POWERUP_SPAWN_INTERVAL = 1.0;
+const float STUN_TIME = 3;
 
 
 // SFML doesn't support scancodes...
@@ -36,24 +37,42 @@ KeyConfig PLAYER_KEYS[] = {
 
 void handle_input(std::vector<Player>& players, float dt) {
     for (Player& p : players) {
+        if (p.stunned) continue;
+
+        float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
+
         if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
-            p.move(0.f, -PLAYER_SPEED * dt);
+            p.move(0.f, -speed * dt);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
-            p.move(0.f, PLAYER_SPEED * dt);
+            p.move(0.f, speed * dt);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
-            p.move(-PLAYER_SPEED * dt, 0.f);
+            p.move(-speed * dt, 0.f);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
-            p.move(PLAYER_SPEED * dt, 0.f);
+            p.move(speed * dt, 0.f);
+        }
+
+        // Check screen bounds
+        auto pos = p.shape.getPosition();
+        if (pos.x < 10) {
+            p.move(10 - pos.x, 0);
+        } else if (pos.x >= WINDOW_WIDTH - 10) {
+            p.move(WINDOW_WIDTH - 10 - pos.x, 0);
+        }
+
+        if (pos.y < 10) {
+            p.move(0, 10 - pos.y);
+        } else if (pos.y >= WINDOW_HEIGHT - 10) {
+            p.move(0, WINDOW_HEIGHT - 10 - pos.y);
         }
     }
 }
 
 
-void handle_item_pickup(std::vector<Player>& players, 
-        std::vector<Item*>& items) {
+void handle_item_pickup(std::vector<Player>& players,
+                        std::vector<Item*>& items) {
     for (Player& p : players) {
         if (p.carried_item == nullptr) {
             auto boundingBox = p.shape.getGlobalBounds();
@@ -76,23 +95,34 @@ void handle_item_pickup(std::vector<Player>& players,
 
 void handle_item_stealing(std::vector<Player>& players) {
     for (Player& p : players) {
-    
         auto player_bounds = p.shape.getGlobalBounds();
 
         for (Player& enemy : players) {
             if (p.index == enemy.index) continue;
 
             if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
-                if (p.carried_item != nullptr) {
+                if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
                     enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
+
+                    p.stun_clock.restart().asSeconds();
+                    p.stunned = true;
                 }
             }
         }
     }
 }
 
+void handle_stun(std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.stunned) {
+            if (p.stun_clock.getElapsedTime().asSeconds() >= STUN_TIME) {
+                p.stunned = false;
+            }
+        }
+    }
+}
 
 void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
     size_t index = 0;
@@ -217,6 +247,8 @@ int main() {
 
         handle_item_stealing(players);
 
+        handle_stun(players);
+
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
                 p.score += ITEM_SCORE;
@@ -224,6 +256,18 @@ int main() {
                 // defined in item.hpp
                 remove_item(items, p.carried_item);
                 p.carried_item = nullptr;
+
+                // Fill a random box
+                std::vector<size_t> available_indices;
+                for (size_t i = 0; i < p.boxes.size(); i++) {
+                    if (!p.boxes[i].filled) {
+                        available_indices.push_back(i);
+                    }
+                }
+                size_t empty_boxes = available_indices.size();
+                if (empty_boxes > 1) {
+                    p.boxes[available_indices[rand() % empty_boxes]].filled = true;
+                }
             }
             if (p.score >= WIN_SCORE) {
                 std::cout << "player " << p.index << " won the game" << std::endl;
@@ -235,11 +279,22 @@ int main() {
         for (int i = 0; i < 4; i++) {
             window.draw(players[i].house);
 
+            for (auto box : players[i].boxes) {
+                window.draw(box.shape);
+
+                if (box.filled) {
+                    sf::CircleShape shape(10, 3);
+                    shape.setPosition(box.shape.getPosition());
+                    shape.setFillColor(sf::Color(200, 255, 255));
+                    window.draw(shape);
+                }
+            }
+
             sf::Text text;
             text.setFont(font);
             text.setString(std::to_string(players[i].score));
             text.setCharacterSize(50);
-            text.setPosition(players[i].house.getPosition());
+            text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
             window.draw(text);
         }
         for (auto p : players) {

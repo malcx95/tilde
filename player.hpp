@@ -11,7 +11,13 @@ const unsigned int HOUSE_HEIGHT = 100;
 
 const unsigned int PLAYER_RADIUS = 10;
 
-const unsigned int STUN_TIME = 3;
+const unsigned int NUM_BOXES = 10;
+
+struct Box {
+    Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false} {}
+    sf::RectangleShape shape;
+    bool filled;
+};
 
 struct Player {
 
@@ -32,6 +38,8 @@ struct Player {
 
     sf::RectangleShape house;
 
+    std::vector<Box> boxes;
+
     Item* carried_item;
 
     Powerup* powerup;
@@ -39,6 +47,8 @@ struct Player {
     void set_position(sf::Vector2f position);
     void move(float dx, float dy);
     bool is_home() const;
+
+    sf::Clock stun_clock;
 
 };
 
