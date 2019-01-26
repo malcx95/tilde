@@ -114,6 +114,14 @@ int main() {
     sf::Font font;
     font.loadFromFile("arial.ttf");
 
+    sf::Texture background_texture;
+    background_texture.loadFromFile("assets/background.png");
+    background_texture.setRepeated(true);
+
+    sf::Sprite background_sprite;
+    background_sprite.setTextureRect(sf::IntRect(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
+    background_sprite.setTexture(background_texture);
+
     std::vector<Player> players = {
         Player(0, sf::Color(255, 100, 100), PLAYER_KEYS[0],
                 sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}),
@@ -169,6 +177,7 @@ int main() {
 
         // Drawing
         window.clear(sf::Color::Black);
+        window.draw(background_sprite);
         for (int i = 0; i < 4; i++) {
             window.draw(players[i].house);
 
