@@ -8,6 +8,7 @@ const int MAX_ITEMS = 10;
 
 struct Item {
     sf::CircleShape shape;
+    bool being_carried;
 };
 
 void spawn_item(std::vector<Item*>& items);
