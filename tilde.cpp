@@ -84,11 +84,26 @@ int main() {
                 players[i].move(PLAYER_SPEED * dt, 0.f);
             }
 
+            auto player_bounds = players[i].shape.getGlobalBounds();
+
+            for (Player& enemy : players) {
+                if (player_bounds.intersects(enemy.shape.getGlobalBounds()) &&
+                    i != enemy.index) {
+                    if (players[i].carried_item != nullptr) {
+                        enemy.carried_item = players[i].carried_item;
+                        enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
+
+                        players[i].carried_item = nullptr;
+
+
+                    }
+                }
+            }
+
             if (players[i].carried_item == nullptr) {
-                auto boundingBox = players[i].shape.getGlobalBounds();
                 for (Item* item : items) {
 
-                    if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
+                    if (!item->being_carried && player_bounds.intersects(item->shape.getGlobalBounds())) {
                         players[i].carried_item = item;
 
                         // TODO maybe remove
