@@ -12,7 +12,7 @@ const unsigned int PLAYER_RADIUS = 10;
 
 struct Player {
 
-    Player(unsigned int index, 
+    Player(unsigned int index,
             sf::Color color,
             KeyConfig config,
             sf::Vector2f house_pos);
@@ -38,4 +38,3 @@ struct Player {
 };
 
 #endif /* ifndef PLAYER_H */
-

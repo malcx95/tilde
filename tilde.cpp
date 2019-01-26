@@ -1,6 +1,9 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
+#include <stdlib.h>
+#include <time.h>
+#include "config.h"
 #include "player.hpp"
 #include "constants.hpp"
 #include "item.hpp"
@@ -8,6 +11,7 @@
 const unsigned int ITEM_SCORE = 10;
 const unsigned int NUM_PLAYERS = 4;
 const float PLAYER_SPEED = 80.f;
+const int WIN_SCORE = 100;
 
 
 // SFML doesn't support scancodes...
@@ -68,6 +72,7 @@ void handle_item_pickup(std::vector<Player>& players,
 
 
 int main() {
+    srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
 
     sf::Font font;
@@ -85,7 +90,7 @@ int main() {
         WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
     };
 
-    float spawnInterval = 1.0f;
+    float spawnInterval = 5.0f;
     std::vector<Item*> items;
 
     sf::Clock deltaClock;
@@ -117,7 +122,7 @@ int main() {
                 remove_item(items, p.carried_item);
                 p.carried_item = nullptr;
             }
-            if (p.score >= 100) {
+            if (p.score >= WIN_SCORE) {
                 std::cout << "player " << p.index << " won the game" << std::endl;
             }
         }
