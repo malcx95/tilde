@@ -100,7 +100,7 @@ void handle_item_pickup(std::vector<Player>& players,
                         std::vector<Item*>& items) {
     for (Player& p : players) {
         if (p.carried_item == nullptr) {
-            auto boundingBox = p.sprite.getGlobalBounds();
+            auto boundingBox = p.shape.getGlobalBounds();
             for (Item* item : items) {
 
                 if (!item->being_carried && 
@@ -124,15 +124,15 @@ void handle_item_stealing(std::vector<Player>& players) {
                 p.powerup->type == PowerupType::IMMUNITY) {
             continue;
         }
-        auto player_bounds = p.sprite.getGlobalBounds();
+        auto player_bounds = p.shape.getGlobalBounds();
 
         for (Player& enemy : players) {
             if (p.index == enemy.index) continue;
 
-            if (player_bounds.intersects(enemy.sprite.getGlobalBounds())) {
+            if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
                 if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
-                    enemy.carried_item->shape.setPosition(enemy.sprite.getPosition());
+                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
 
                     p.stun_clock.restart().asSeconds();
@@ -235,21 +235,39 @@ int main() {
     sf::Texture green_texture;
     sf::Texture blue_texture;
     sf::Texture yellow_texture;
-    red_texture.loadFromFile("../red_player.png");
-    green_texture.loadFromFile("../green_player.png");
-    blue_texture.loadFromFile("../blue_player.png");
-    yellow_texture.loadFromFile("../yellow_player.png");
+    red_texture.loadFromFile("../assets/red_player.png");
+    green_texture.loadFromFile("../assets/green_player.png");
+    blue_texture.loadFromFile("../assets/blue_player.png");
+    yellow_texture.loadFromFile("../assets/yellow_player.png");
+
+    sf::Texture red_house_texture;
+    sf::Texture blue_house_texture;
+    sf::Texture green_house_texture;
+    sf::Texture yellow_house_texture;
+    red_house_texture.loadFromFile("../assets/house_red.png");
+    blue_house_texture.loadFromFile("../assets/house_blue.png");
+    green_house_texture.loadFromFile("../assets/house_green.png");
+    yellow_house_texture.loadFromFile("../assets/house_yellow.png");
+
+
+    sf::Texture background_texture;
+    background_texture.loadFromFile("../assets/background.png");
+    background_texture.setRepeated(true);
+
+    sf::Sprite background_sprite;
+    background_sprite.setTextureRect(sf::IntRect(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
+    background_sprite.setTexture(background_texture);
 
     std::vector<Player> players = {
-        Player(0, sf::Color(255, 100, 100), PLAYER_KEYS[0],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture),
-        Player(1, sf::Color(100, 255, 100), PLAYER_KEYS[1],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture),
-        Player(2, sf::Color(100, 100, 255), PLAYER_KEYS[2],
-                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture),
-        Player(3, sf::Color(255, 255, 100), PLAYER_KEYS[3],
-                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
-        WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture)
+        Player(0, PLAYER_KEYS[0],
+               sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
+        Player(1, PLAYER_KEYS[1],
+               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture, &green_house_texture),
+        Player(2, PLAYER_KEYS[2],
+               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
+        Player(3, PLAYER_KEYS[3],
+               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
+                                WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
     };
 
     std::vector<Item*> items;
@@ -305,7 +323,7 @@ int main() {
                     }
                 }
                 size_t empty_boxes = available_indices.size();
-                if (empty_boxes > 1) {
+                if (empty_boxes > 0) {
                     p.boxes[available_indices[rand() % empty_boxes]].filled = true;
                 }
             }
@@ -316,8 +334,9 @@ int main() {
 
         // Drawing
         window.clear(sf::Color::Black);
+        window.draw(background_sprite);
         for (int i = 0; i < 4; i++) {
-            window.draw(players[i].house);
+            window.draw(players[i].house_sprite);
 
             for (auto box : players[i].boxes) {
                 window.draw(box.shape);
@@ -335,7 +354,7 @@ int main() {
             text.setString(std::to_string(players[i].score));
             text.setCharacterSize(50);
             text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
-            window.draw(text);
+            //window.draw(text);
         }
         for (auto p : players) {
             float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
