@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include "config.h"
 #include "player.hpp"
 #include "constants.hpp"
@@ -55,6 +56,11 @@ void handle_input(std::vector<Player>& players, float dt) {
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
             dir.x += 1;
+        }
+
+        // Prevent diagonal walking from being faster
+        if (dir.x != 0 && dir.y != 0) {
+            dir /= (float)sqrt(2);
         }
 
         float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
