@@ -142,6 +142,7 @@ void handle_item_stealing(std::vector<Player>& players) {
 
                     p.stun_clock.restart().asSeconds();
                     p.stunned = true;
+                    p.sprite.setRotation(90.0f);
                 }
             }
         }
@@ -188,6 +189,7 @@ void handle_stun(std::vector<Player>& players) {
         if (p.stunned) {
             if (p.stun_clock.getElapsedTime().asSeconds() >= STUN_TIME) {
                 p.stunned = false;
+                p.sprite.setRotation(0);
             }
         }
     }
@@ -400,7 +402,6 @@ int main() {
                     window.draw(fire_sprite);
                 }
             }
-
 
             // sf::Text text;
             // text.setFont(font);
