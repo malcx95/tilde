@@ -4,8 +4,8 @@
 #include <SFML/Graphics.hpp>
 #include "progressbar.hpp"
 
-const unsigned int NUM_POWERUP_TYPES = 2;
-enum PowerupType { IMMUNITY, FASTER };
+const unsigned int NUM_POWERUP_TYPES = 3;
+enum PowerupType { IMMUNITY, FASTER, FIRE };
 
 const float POWERUP_TIME = 5.0;
 const unsigned int POWERUP_WIDTH = 6;
