@@ -11,7 +11,8 @@ Player::Player(
     this->carried_item = nullptr;
 
     this->house.setPosition(house_pos);
-    this->house.setFillColor(sf::Color(100, 100, 100));
+    this->house.setFillColor(
+        sf::Color(100 + color.r * 0.2, 100 + color.g * 0.2, 100 + color.b * 0.2));
 
     this->shape.setOrigin(10, 10);
     this->shape.setFillColor(color);
