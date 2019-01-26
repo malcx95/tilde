@@ -41,6 +41,10 @@ void handle_input(std::vector<Player>& players, float dt) {
 
         float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
 
+        if (p.powerup != nullptr && p.powerup->type == PowerupType::FASTER) {
+            speed *= SPEED_INCREASE;
+        }
+
         if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
             p.move(0.f, -speed * dt);
         }
@@ -95,13 +99,20 @@ void handle_item_pickup(std::vector<Player>& players,
 
 void handle_item_stealing(std::vector<Player>& players) {
     for (Player& p : players) {
+        if (p.powerup != nullptr &&
+                p.powerup->type == PowerupType::IMMUNITY) {
+            continue;
+        }
         auto player_bounds = p.shape.getGlobalBounds();
 
         for (Player& enemy : players) {
             if (p.index == enemy.index) continue;
 
+
             if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
-                if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
+                if (p.carried_item != nullptr &&
+                        !enemy.stunned &&
+                        enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
                     enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
@@ -159,7 +170,6 @@ void spawn_powerup(std::vector<Powerup*>& powerups,
             rand_y = (unsigned int)(rand() % WINDOW_HEIGHT);
             p->shape.setPosition(rand_x, rand_y);
         } while (!is_free_to_place(p, players));
-        std::cout << "Spawned powerup at " << rand_x << ", " << rand_y << std::endl;
         powerups.push_back(p);
     }
 }
@@ -174,7 +184,6 @@ void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>&
                         bb.intersects(powerup->shape.getGlobalBounds())) {
                     p.powerup = powerup;
                     p.powerup->activate();
-                    std::cout << "Picked up powerup" << std::endl;
                     break;
                 }
             }
@@ -188,7 +197,6 @@ void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& playe
         if (p.powerup->should_deactivate()) {
             remove_powerup(powerups, p.powerup);
             p.powerup = nullptr;
-            std::cout << "Removed powerup" << std::endl;
         }
     }
 }

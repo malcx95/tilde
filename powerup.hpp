@@ -10,6 +10,8 @@ const float POWERUP_TIME = 5.0;
 const unsigned int POWERUP_WIDTH = 6;
 const unsigned int MAX_NUM_POWERUPS = 10;
 
+const float SPEED_INCREASE = 2.;
+
 struct Powerup {
 
     Powerup(PowerupType type, sf::Vector2f position);
