@@ -2,19 +2,20 @@
 
 Player::Player(
     unsigned int index,
-    sf::Color color,
     KeyConfig config,
     sf::Vector2f house_pos,
-    sf::Texture* texture
-) : key_config{config}, index{index}, direction{Down}, shape{PLAYER_RADIUS}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} { 
+    sf::Texture* texture,
+    sf::Texture* house_texture
+) : key_config{config}, index{index}, direction{Down}, shape{PLAYER_RADIUS}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} {
     this->score = 0;
     this->stunned = false;
     this->moving = false;
     this->carried_item = nullptr;
+    this->powerup = nullptr;
 
     this->house.setPosition(house_pos);
-    this->house.setFillColor(
-        sf::Color(100 + color.r * 0.2, 100 + color.g * 0.2, 100 + color.b * 0.2));
+    this->house_sprite.setTexture(*house_texture);
+    this->house_sprite.setPosition(house_pos);
 
     this->sprite.setTexture(*texture);
     this->sprite.setOrigin(PLAYER_RADIUS, PLAYER_RADIUS);
@@ -38,6 +39,9 @@ Player::Player(
 }
 
 void Player::set_position(sf::Vector2f position) {
+    // if (this->powerup != nullptr) {
+    //     this->powerup->shape.setPosition(position);
+    // }
     if (this->carried_item != nullptr) {
         this->carried_item->shape.setPosition(position);
     }
@@ -46,6 +50,9 @@ void Player::set_position(sf::Vector2f position) {
 }
 
 void Player::move(float dx, float dy) {
+    // if (this->powerup != nullptr) {
+    //     this->powerup->shape.move(dx, dy);
+    // }
     if (this->carried_item != nullptr) {
         this->carried_item->shape.move(dx, dy);
     }
@@ -57,4 +64,3 @@ bool Player::is_home() const {
     auto house_bb = this->house.getGlobalBounds();
     return house_bb.intersects(this->sprite.getGlobalBounds());
 }
-

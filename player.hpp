@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include "item.hpp"
 #include "constants.hpp"
+#include "powerup.hpp"
 
 const unsigned int HOUSE_WIDTH = 200;
 const unsigned int HOUSE_HEIGHT = 100;
@@ -23,10 +24,10 @@ enum Direction { Up, Right, Down, Left };
 struct Player {
     Player(
         unsigned int index,
-        sf::Color color,
         KeyConfig config,
         sf::Vector2f house_pos,
-        sf::Texture* texture
+        sf::Texture* texture,
+        sf::Texture* house_texture
     );
 
     KeyConfig key_config;
@@ -38,9 +39,12 @@ struct Player {
 
     sf::Sprite sprite;
     sf::CircleShape shape;
+    sf::Sprite house_sprite;
     sf::RectangleShape house;
     std::vector<Box> boxes;
     Item* carried_item;
+
+    Powerup* powerup;
 
     void set_position(sf::Vector2f position);
     void move(float dx, float dy);

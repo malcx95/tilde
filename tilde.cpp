@@ -7,12 +7,14 @@
 #include "config.h"
 #include "player.hpp"
 #include "constants.hpp"
+#include "powerup.hpp"
 #include "item.hpp"
 
 const unsigned int ITEM_SCORE = 10;
-const unsigned int NUM_PLAYERS = 4;
 const float PLAYER_SPEED = 80.f;
 const int WIN_SCORE = 100;
+const float ITEM_SPAWN_INTERVAL = 5.0f;
+const float POWERUP_SPAWN_INTERVAL = 1.0;
 const float STUN_TIME = 3;
 
 
@@ -56,6 +58,11 @@ void handle_input(std::vector<Player>& players, float dt) {
         }
 
         float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
+
+        if (p.powerup != nullptr && p.powerup->type == PowerupType::FASTER) {
+            speed *= SPEED_INCREASE;
+        }
+
         auto movement = dir * speed * dt;
         p.move(movement.x, movement.y);
 
@@ -96,7 +103,8 @@ void handle_item_pickup(std::vector<Player>& players,
             auto boundingBox = p.shape.getGlobalBounds();
             for (Item* item : items) {
 
-                if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
+                if (!item->being_carried && 
+                        boundingBox.intersects(item->shape.getGlobalBounds())) {
                     p.carried_item = item;
 
                     // TODO maybe remove
@@ -112,6 +120,10 @@ void handle_item_pickup(std::vector<Player>& players,
 
 void handle_item_stealing(std::vector<Player>& players) {
     for (Player& p : players) {
+        if (p.powerup != nullptr &&
+                p.powerup->type == PowerupType::IMMUNITY) {
+            continue;
+        }
         auto player_bounds = p.shape.getGlobalBounds();
 
         for (Player& enemy : players) {
@@ -141,6 +153,72 @@ void handle_stun(std::vector<Player>& players) {
     }
 }
 
+void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
+    size_t index = 0;
+    for (size_t i = 0; i < powerups.size(); ++i) {
+        if (powerups[i] == powerup) {
+            index = i;
+            break;
+        }
+    }
+    powerups.erase(powerups.begin() + index);
+    delete powerup;
+}
+
+bool is_free_to_place(Powerup* powerup, 
+        std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.house.getGlobalBounds().intersects(
+                    powerup->shape.getGlobalBounds())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void spawn_powerup(std::vector<Powerup*>& powerups, 
+        std::vector<Player>& players) {
+    if (powerups.size() < MAX_NUM_POWERUPS) {
+        PowerupType type = (PowerupType)(rand() % NUM_POWERUP_TYPES);
+        Powerup* p = new Powerup{type, sf::Vector2f{0, 0}};
+        unsigned int rand_x;
+        unsigned int rand_y;
+        do {
+            rand_x = (unsigned int)(rand() % WINDOW_WIDTH);
+            rand_y = (unsigned int)(rand() % WINDOW_HEIGHT);
+            p->shape.setPosition(rand_x, rand_y);
+        } while (!is_free_to_place(p, players));
+        powerups.push_back(p);
+    }
+}
+
+void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.powerup == nullptr) {
+            auto bb = p.sprite.getGlobalBounds();
+            for (Powerup* powerup : powerups) {
+
+                if (!powerup->active && 
+                        bb.intersects(powerup->shape.getGlobalBounds())) {
+                    p.powerup = powerup;
+                    p.powerup->activate();
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.powerup == nullptr) continue;
+        if (p.powerup->should_deactivate()) {
+            remove_powerup(powerups, p.powerup);
+            p.powerup = nullptr;
+        }
+    }
+}
+
 int main() {
     srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
@@ -154,28 +232,47 @@ int main() {
     sf::Texture green_texture;
     sf::Texture blue_texture;
     sf::Texture yellow_texture;
-    red_texture.loadFromFile("../red_player.png");
-    green_texture.loadFromFile("../green_player.png");
-    blue_texture.loadFromFile("../blue_player.png");
-    yellow_texture.loadFromFile("../yellow_player.png");
+    red_texture.loadFromFile("../assets/red_player.png");
+    green_texture.loadFromFile("../assets/green_player.png");
+    blue_texture.loadFromFile("../assets/blue_player.png");
+    yellow_texture.loadFromFile("../assets/yellow_player.png");
+
+    sf::Texture red_house_texture;
+    sf::Texture blue_house_texture;
+    sf::Texture green_house_texture;
+    sf::Texture yellow_house_texture;
+    red_house_texture.loadFromFile("../assets/house_red.png");
+    blue_house_texture.loadFromFile("../assets/house_blue.png");
+    green_house_texture.loadFromFile("../assets/house_green.png");
+    yellow_house_texture.loadFromFile("../assets/house_yellow.png");
+
+
+    sf::Texture background_texture;
+    background_texture.loadFromFile("../assets/background.png");
+    background_texture.setRepeated(true);
+
+    sf::Sprite background_sprite;
+    background_sprite.setTextureRect(sf::IntRect(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
+    background_sprite.setTexture(background_texture);
 
     std::vector<Player> players = {
-        Player(0, sf::Color(255, 100, 100), PLAYER_KEYS[0],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture),
-        Player(1, sf::Color(100, 255, 100), PLAYER_KEYS[1],
-                sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture),
-        Player(2, sf::Color(100, 100, 255), PLAYER_KEYS[2],
-                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture),
-        Player(3, sf::Color(255, 255, 100), PLAYER_KEYS[3],
-                sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
-        WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture)
+        Player(0, PLAYER_KEYS[0],
+               sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
+        Player(1, PLAYER_KEYS[1],
+               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture, &green_house_texture),
+        Player(2, PLAYER_KEYS[2],
+               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
+        Player(3, PLAYER_KEYS[3],
+               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
+                                WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
     };
 
-    float spawn_interval = 5.0f;
     std::vector<Item*> items;
+    std::vector<Powerup*> powerups;
 
     sf::Clock delta_clock;
     sf::Clock spawn_clock;
+    sf::Clock powerup_clock;
 
     while (window.isOpen()) {
         float dt = delta_clock.restart().asSeconds();
@@ -185,15 +282,23 @@ int main() {
                 window.close();
         }
 
-        if (spawn_clock.getElapsedTime().asSeconds() > spawn_interval) {
+        if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
             // defined in item.hpp
             spawn_item(items);
             spawn_clock.restart();
         }
 
+        if (powerup_clock.getElapsedTime().asSeconds() > POWERUP_SPAWN_INTERVAL) {
+            // defined in item.hpp
+            spawn_powerup(powerups, players);
+            powerup_clock.restart();
+        }
+
         handle_input(players, dt);
 
         handle_item_pickup(players, items);
+        handle_powerup_pickup(powerups, players);
+        update_powerups(powerups, players);
 
         handle_item_stealing(players);
 
@@ -226,6 +331,7 @@ int main() {
 
         // Drawing
         window.clear(sf::Color::Black);
+        window.draw(background_sprite);
         for (int i = 0; i < 4; i++) {
             window.draw(players[i].house);
 
@@ -256,11 +362,17 @@ int main() {
             if (!p.moving) {
                 frame = 1;
             }
+            window.draw(p.house_sprite);
             p.sprite.setTextureRect(sf::IntRect(frame * 16, (int)p.direction * 18, 16, 18));
             window.draw(p.sprite);
         }
         for (auto item : items) {
             window.draw(item->shape);
+        }
+        for (auto powerup : powerups) {
+            if (!powerup->active) {
+                window.draw(powerup->shape);
+            }
         }
 
         window.display();

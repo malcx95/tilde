@@ -15,6 +15,5 @@ struct KeyConfig {
     sf::Keyboard::Key right;
 };
 
-
 #endif /* ifndef CONSTANTS */
 
