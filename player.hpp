@@ -10,6 +10,8 @@ const unsigned int HOUSE_HEIGHT = 100;
 
 const unsigned int PLAYER_RADIUS = 10;
 
+const unsigned int STUN_TIME = 3;
+
 struct Player {
 
     Player(unsigned int index,

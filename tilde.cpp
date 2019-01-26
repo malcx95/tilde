@@ -71,6 +71,26 @@ void handle_item_pickup(std::vector<Player>& players,
 }
 
 
+void handle_item_stealing(std::vector<Player>& players) {
+    for (Player& p : players) {
+    
+        auto player_bounds = p.shape.getGlobalBounds();
+
+        for (Player& enemy : players) {
+            if (p.index == enemy.index) continue;
+
+            if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
+                if (p.carried_item != nullptr) {
+                    enemy.carried_item = p.carried_item;
+                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
+                    p.carried_item = nullptr;
+                }
+            }
+        }
+    }
+}
+
+
 int main() {
     srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
@@ -113,6 +133,8 @@ int main() {
         handle_input(players, dt);
 
         handle_item_pickup(players, items);
+
+        handle_item_stealing(players);
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
