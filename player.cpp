@@ -6,21 +6,19 @@ Player::Player(
     sf::Vector2f house_pos,
     sf::Texture* texture,
     sf::Texture* house_texture
-) : key_config{config}, index{index}, direction{Down}, shape{PLAYER_RADIUS}, house{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}} {
-    this->score = 0;
+) : key_config{config}, index{index}, direction{Down}, shape{PLAYER_RADIUS} {
     this->stunned = false;
     this->moving = false;
     this->carried_item = nullptr;
     this->powerup = nullptr;
 
-    this->house.setPosition(house_pos);
     this->house_sprite.setTexture(*house_texture);
     this->house_sprite.setPosition(house_pos);
 
     this->sprite.setTexture(*texture);
     this->sprite.setOrigin(PLAYER_RADIUS, PLAYER_RADIUS);
     this->shape.setOrigin(PLAYER_RADIUS, PLAYER_RADIUS);
-    auto player_pos = house_pos + sf::Vector2f(HOUSE_WIDTH / 2, HOUSE_HEIGHT / 2);
+    auto player_pos = house_pos + sf::Vector2f(this->house_sprite.getLocalBounds().width / 2, this->house_sprite.getLocalBounds().height / 2);
     set_position(player_pos);
 
     for (unsigned int i = 0; i < NUM_BOXES; i++) {
@@ -31,7 +29,7 @@ Player::Player(
             sf::Vector2f offset(10 + i * ITEM_SPACING, 25);
             boxes[i].shape.setPosition(house_pos + offset);
         } else {
-            sf::Vector2f offset(10 + (i - NUM_BOXES / 2) * ITEM_SPACING, HOUSE_HEIGHT - 45);
+            sf::Vector2f offset(10 + (i - NUM_BOXES / 2) * ITEM_SPACING, this->house_sprite.getLocalBounds().height - 45);
             boxes[i].shape.setPosition(house_pos + offset);
         }
     }
@@ -61,6 +59,6 @@ void Player::move(float dx, float dy) {
 }
 
 bool Player::is_home() const {
-    auto house_bb = this->house.getGlobalBounds();
-    return house_bb.intersects(this->sprite.getGlobalBounds());
+    auto house_bb = this->house_sprite.getGlobalBounds();
+    return house_bb.intersects(this->shape.getGlobalBounds());
 }

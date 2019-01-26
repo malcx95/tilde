@@ -6,10 +6,7 @@
 #include "constants.hpp"
 #include "powerup.hpp"
 
-const unsigned int HOUSE_WIDTH = 200;
-const unsigned int HOUSE_HEIGHT = 100;
-
-const unsigned int PLAYER_RADIUS = 10;
+const unsigned int PLAYER_RADIUS = 8;
 
 const unsigned int NUM_BOXES = 10;
 
@@ -17,9 +14,11 @@ const unsigned int PROGRESSBAR_DISTANCE = 10;
 const unsigned int ITEM_SPACING = 40;
 
 struct Box {
-    Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false} {}
+    Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false}, on_fire{false} {}
     sf::RectangleShape shape;
+    sf::Clock fire_clock;
     bool filled;
+    bool on_fire;
 };
 
 enum Direction { Up, Right, Down, Left };
@@ -35,7 +34,6 @@ struct Player {
 
     KeyConfig key_config;
     unsigned int index;
-    int score;
     bool stunned;
     bool moving;
     Direction direction;
@@ -43,7 +41,6 @@ struct Player {
     sf::Sprite sprite;
     sf::CircleShape shape;
     sf::Sprite house_sprite;
-    sf::RectangleShape house;
     std::vector<Box> boxes;
     Item* carried_item;
 

@@ -8,6 +8,7 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position, PowerupTextures poweru
     : type{type}, bar{PROGRESSBAR_WIDTH, PROGRESSBAR_HEIGHT} {
     this->sprite.setPosition(position);
     this->active = false;
+    this->sprite.setOrigin(POWERUP_WIDTH, POWERUP_WIDTH);
     sf::Color c;
     switch (type) {
         case PowerupType::FASTER:
@@ -17,6 +18,10 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position, PowerupTextures poweru
         case PowerupType::IMMUNITY:
             this->sprite.setTexture(*powerup_textures.immunity);
             c = sf::Color{255, 0, 255};
+            break;
+        case PowerupType::FIRE:
+            this->sprite.setTexture(*powerup_textures.fire);
+            c = sf::Color{255, 200, 50};
             break;
     }
     this->bar.set_colors(c, sf::Color{50, 50, 50});

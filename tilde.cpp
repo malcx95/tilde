@@ -11,12 +11,11 @@
 #include "powerup.hpp"
 #include "item.hpp"
 
-const unsigned int ITEM_SCORE = 10;
 const float PLAYER_SPEED = 80.f;
-const int WIN_SCORE = 100;
 const float ITEM_SPAWN_INTERVAL = 5.0f;
 const float POWERUP_SPAWN_INTERVAL = 1.0;
 const float STUN_TIME = 3;
+const float BURN_TIME = 5;
 
 
 // SFML doesn't support scancodes...
@@ -109,7 +108,7 @@ void handle_item_pickup(std::vector<Player>& players,
             auto boundingBox = p.shape.getGlobalBounds();
             for (Item* item : items) {
 
-                if (!item->being_carried && 
+                if (!item->being_carried &&
                         boundingBox.intersects(item->shape.getGlobalBounds())) {
                     p.carried_item = item;
 
@@ -149,6 +148,41 @@ void handle_item_stealing(std::vector<Player>& players) {
     }
 }
 
+void handle_fire(std::vector<Player>& players) {
+    for (Player& p : players) {
+        // Light items that player walks on
+        if (p.powerup != nullptr && p.powerup->type == PowerupType::FIRE) {
+            for (Player& other : players) {
+                for (Box& box : other.boxes) {
+                    auto box_bb = box.shape.getGlobalBounds();
+                    auto player_bb = p.shape.getGlobalBounds();
+                    if (box.filled && !box.on_fire && box_bb.intersects(player_bb)) {
+                        box.on_fire = true;
+                        box.fire_clock.restart();
+                    }
+                }
+            }
+        }
+
+        for (Box& box : p.boxes) {
+            if (box.on_fire) {
+                auto box_bb = box.shape.getGlobalBounds();
+                auto player_bb = p.shape.getGlobalBounds();
+
+                // Let players put out fires on their own stuff
+                if (box_bb.intersects(player_bb)) {
+                    box.on_fire = false;
+                }
+
+                if (box.fire_clock.getElapsedTime().asSeconds() > BURN_TIME) {
+                    box.filled = false;
+                    box.on_fire = false;
+                }
+            }
+        }
+    }
+}
+
 void handle_stun(std::vector<Player>& players) {
     for (Player& p : players) {
         if (p.stunned) {
@@ -171,10 +205,10 @@ void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
     delete powerup;
 }
 
-bool is_free_to_place(Powerup* powerup, 
+bool is_free_to_place(Powerup* powerup,
         std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.house.getGlobalBounds().intersects(
+        if (p.house_sprite.getGlobalBounds().intersects(
                     powerup->sprite.getGlobalBounds())) {
             return false;
         }
@@ -182,11 +216,10 @@ bool is_free_to_place(Powerup* powerup,
     return true;
 }
 
-void spawn_powerup(std::vector<Powerup*>& powerups, 
+void spawn_powerup(std::vector<Powerup*>& powerups,
                    std::vector<Player>& players, PowerupTextures powerup_textures) {
     if (powerups.size() < MAX_NUM_POWERUPS) {
         PowerupType type = (PowerupType)(rand() % NUM_POWERUP_TYPES);
-        // TODO: fix
         Powerup* p = new Powerup{type, sf::Vector2f{0, 0}, powerup_textures};
         unsigned int rand_x;
         unsigned int rand_y;
@@ -202,10 +235,10 @@ void spawn_powerup(std::vector<Powerup*>& powerups,
 void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
     for (Player& p : players) {
         if (p.powerup == nullptr) {
-            auto bb = p.sprite.getGlobalBounds();
+            auto bb = p.shape.getGlobalBounds();
             for (Powerup* powerup : powerups) {
 
-                if (!powerup->active && 
+                if (!powerup->active &&
                         bb.intersects(powerup->sprite.getGlobalBounds())) {
                     p.powerup = powerup;
                     p.powerup->activate();
@@ -258,13 +291,18 @@ int main() {
 
     sf::Texture speed_texture;
     sf::Texture immunity_texture;
-
+    sf::Texture fire_texture;
     speed_texture.loadFromFile("../assets/speed.png");
     immunity_texture.loadFromFile("../assets/immunity.png");
+    fire_texture.loadFromFile("../assets/fire.png");
 
     PowerupTextures powerup_textures;
     powerup_textures.speed = &speed_texture;
     powerup_textures.immunity = &immunity_texture;
+    powerup_textures.fire = &fire_texture;
+
+    sf::Texture burning_texture;
+    burning_texture.loadFromFile("../assets/Fiyah.png");
 
     sf::Texture background_texture;
     background_texture.loadFromFile("../assets/background.png");
@@ -274,16 +312,18 @@ int main() {
     background_sprite.setTextureRect(sf::IntRect(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
     background_sprite.setTexture(background_texture);
 
+    float house_height = red_house_texture.getSize().y;
+    float house_width = red_house_texture.getSize().x;
     std::vector<Player> players = {
         Player(0, PLAYER_KEYS[0],
                sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
         Player(1, PLAYER_KEYS[1],
-               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &green_texture, &green_house_texture),
+               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
         Player(2, PLAYER_KEYS[2],
-               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
+               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
         Player(3, PLAYER_KEYS[3],
-               sf::Vector2f{WINDOW_WIDTH - HOUSE_WIDTH - WINDOW_MARGIN,
-                                WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
+               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
+                                WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
     };
 
     std::vector<Item*> items;
@@ -320,14 +360,12 @@ int main() {
         update_powerups(powerups, players);
 
         handle_item_stealing(players);
+        handle_fire(players);
 
         handle_stun(players);
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
-                p.score += ITEM_SCORE;
-
-                // defined in item.hpp
                 remove_item(items, p.carried_item);
                 p.carried_item = nullptr;
 
@@ -342,9 +380,9 @@ int main() {
                 if (empty_boxes > 0) {
                     p.boxes[available_indices[rand() % empty_boxes]].filled = true;
                 }
-            }
-            if (p.score >= WIN_SCORE) {
-                std::cout << "player " << p.index << " won the game" << std::endl;
+                if (empty_boxes == 1) {
+                    std::cout << "player " << p.index << " won the game" << std::endl;
+                }
             }
         }
 
@@ -363,14 +401,25 @@ int main() {
                     shape.setFillColor(sf::Color(200, 255, 255));
                     window.draw(shape);
                 }
+
+                if (box.on_fire) {
+                    sf::Sprite fire_sprite;
+                    fire_sprite.setTexture(burning_texture);
+                    float time = box.fire_clock.getElapsedTime().asSeconds() * 8;
+                    int frame = (int)time % 6;
+                    fire_sprite.setTextureRect(sf::IntRect(frame * 10, 0, 10, 13));
+                    fire_sprite.setPosition(box.shape.getPosition() + sf::Vector2f(5, 5));
+                    window.draw(fire_sprite);
+                }
             }
 
-            sf::Text text;
-            text.setFont(font);
-            text.setString(std::to_string(players[i].score));
-            text.setCharacterSize(50);
-            text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
-            //window.draw(text);
+
+            // sf::Text text;
+            // text.setFont(font);
+            // text.setString(std::to_string(players[i].score));
+            // text.setCharacterSize(50);
+            // text.setPosition(players[i].house_sprite.getPosition() + sf::Vector2f(0, 15));
+            // window.draw(text);
         }
         for (auto p : players) {
             float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
