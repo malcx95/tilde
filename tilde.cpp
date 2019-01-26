@@ -34,17 +34,18 @@ KeyConfig PLAYER_KEYS[] = {
 
 void handle_input(std::vector<Player>& players, float dt) {
     for (Player& p : players) {
+        float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
         if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
-            p.move(0.f, -PLAYER_SPEED * dt);
+            p.move(0.f, -speed * dt);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
-            p.move(0.f, PLAYER_SPEED * dt);
+            p.move(0.f, speed * dt);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
-            p.move(-PLAYER_SPEED * dt, 0.f);
+            p.move(-speed * dt, 0.f);
         }
         if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
-            p.move(PLAYER_SPEED * dt, 0.f);
+            p.move(speed * dt, 0.f);
         }
     }
 }
