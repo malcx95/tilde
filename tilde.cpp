@@ -12,6 +12,7 @@ const unsigned int ITEM_SCORE = 10;
 const unsigned int NUM_PLAYERS = 4;
 const float PLAYER_SPEED = 80.f;
 const int WIN_SCORE = 100;
+const float STUN_TIME = 3;
 
 
 // SFML doesn't support scancodes...
@@ -34,7 +35,10 @@ KeyConfig PLAYER_KEYS[] = {
 
 void handle_input(std::vector<Player>& players, float dt) {
     for (Player& p : players) {
+        if (p.stunned) continue;
+
         float speed = p.carried_item ? PLAYER_SPEED / 2.0f : PLAYER_SPEED;
+
         if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
             p.move(0.f, -speed * dt);
         }
@@ -51,8 +55,8 @@ void handle_input(std::vector<Player>& players, float dt) {
 }
 
 
-void handle_item_pickup(std::vector<Player>& players, 
-        std::vector<Item*>& items) {
+void handle_item_pickup(std::vector<Player>& players,
+                        std::vector<Item*>& items) {
     for (Player& p : players) {
         if (p.carried_item == nullptr) {
             auto boundingBox = p.shape.getGlobalBounds();
@@ -74,23 +78,34 @@ void handle_item_pickup(std::vector<Player>& players,
 
 void handle_item_stealing(std::vector<Player>& players) {
     for (Player& p : players) {
-    
         auto player_bounds = p.shape.getGlobalBounds();
 
         for (Player& enemy : players) {
             if (p.index == enemy.index) continue;
 
             if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
-                if (p.carried_item != nullptr) {
+                if (p.carried_item != nullptr && !enemy.stunned) {
                     enemy.carried_item = p.carried_item;
                     enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
+
+                    p.stun_clock.restart().asSeconds();
+                    p.stunned = true;
                 }
             }
         }
     }
 }
 
+void handle_stun(std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.stunned) {
+            if (p.stun_clock.getElapsedTime().asSeconds() >= STUN_TIME) {
+                p.stunned = false;
+            }
+        }
+    }
+}
 
 int main() {
     srand(time(NULL));
@@ -136,6 +151,8 @@ int main() {
         handle_item_pickup(players, items);
 
         handle_item_stealing(players);
+
+        handle_stun(players);
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
