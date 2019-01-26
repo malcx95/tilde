@@ -110,11 +110,10 @@ void handle_item_pickup(std::vector<Player>& players,
 
                 if (!item->being_carried &&
                         !item->in_box &&
-                        boundingBox.intersects(item->shape.getGlobalBounds())) {
+                        boundingBox.intersects(item->sprite.getGlobalBounds())) {
                     p.carried_item = item;
 
-                    // TODO maybe remove
-                    item->shape.setPosition(p.sprite.getPosition());
+                    item->sprite.setPosition(p.sprite.getPosition());
                     item->being_carried = true;
                     break;
                 }
@@ -138,7 +137,7 @@ void handle_item_stealing(std::vector<Player>& players) {
             if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
                 if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
-                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
+                    enemy.carried_item->sprite.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
 
                     p.stun_clock.restart().asSeconds();
@@ -283,15 +282,15 @@ void handle_stealing_from_house(std::vector<Player>& players) {
         for (Player& enemy : players) {
             for (Box& box: enemy.boxes) {
                 if (box.item != nullptr &&
-                    bb.intersects(box.item->shape.getGlobalBounds())) {
+                    bb.intersects(box.item->sprite.getGlobalBounds())) {
                     box.filled = false;
                     Item* item = box.item;
                     box.item = nullptr;
                     p.carried_item = item;
-                    item->shape.setOrigin(10, 10);
+                    item->sprite.setOrigin(10, 10);
                     item->being_carried = true;
                     item->in_box = false;
-                    item->shape.setPosition(p.sprite.getPosition());
+                    item->sprite.setPosition(p.sprite.getPosition());
                     return;
                 }
             }
@@ -341,6 +340,22 @@ int main() {
     powerup_textures.fire = &fire_texture;
     powerup_textures.stealing = &stealing_texture;
 
+    sf::Texture chair_texture;
+    sf::Texture fridge_texture;
+    sf::Texture tv_texture;
+    sf::Texture plant_texture;
+    chair_texture.loadFromFile("../assets/chair.png");
+    fridge_texture.loadFromFile("../assets/fridge.png");
+    tv_texture.loadFromFile("../assets/tv.png");
+    plant_texture.loadFromFile("../assets/plant.png");
+
+    std::vector<sf::Texture*> item_textures = {
+        &chair_texture,
+        &fridge_texture,
+        &tv_texture,
+        &plant_texture
+    };
+
     sf::Texture burning_texture;
     burning_texture.loadFromFile("../assets/Fiyah.png");
 
@@ -384,7 +399,7 @@ int main() {
         }
 
         if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
-            spawn_item(items);
+            spawn_item(items, item_textures);
             spawn_clock.restart();
         }
 
@@ -426,8 +441,8 @@ int main() {
                 size_t empty_boxes = available_indices.size();
                 if (empty_boxes > 0) {
                     Box* b = &p.boxes[available_indices[rand() % empty_boxes]];
-                    item->shape.setOrigin(0, 0);
-                    item->shape.setPosition(
+                    item->sprite.setOrigin(0, 0);
+                    item->sprite.setPosition(
                             b->shape.getPosition());
                     b->filled = true;
                     b->item = item;
@@ -439,6 +454,11 @@ int main() {
             }
         }
 
+        struct PowerupTextures {
+            sf::Texture* speed;
+            sf::Texture* immunity;
+            sf::Texture* fire;
+        };
         // Drawing
         window.clear(sf::Color::Black);
         window.draw(background_sprite);
@@ -449,7 +469,7 @@ int main() {
                 window.draw(box.shape);
 
                 if (box.filled) {
-                    window.draw(box.item->shape);
+                    window.draw(box.item->sprite);
                 }
 
                 if (box.on_fire) {
@@ -478,7 +498,7 @@ int main() {
         for (auto item : items) {
             // we draw those in boxes earlier
             if (!item->in_box) {
-                window.draw(item->shape);
+                window.draw(item->sprite);
             }
         }
         for (auto powerup : powerups) {
