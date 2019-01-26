@@ -228,6 +228,14 @@ void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& playe
     }
 }
 
+void update_powerup_animations(std::vector<Powerup*>& powerups) {
+    for (Powerup* p : powerups) {
+        if (!p->active) {
+            p->update_animation();
+        }
+    }
+}
+
 int main() {
     srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
@@ -310,6 +318,7 @@ int main() {
         handle_item_pickup(players, items);
         handle_powerup_pickup(powerups, players);
         update_powerups(powerups, players);
+        update_powerup_animations(powerups);
 
         handle_item_stealing(players);
 

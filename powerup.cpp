@@ -10,6 +10,7 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position)
     this->shape.setPosition(position);
     this->active = false;
     this->shape.setOrigin(POWERUP_WIDTH, POWERUP_WIDTH);
+    this->animation_counter = 0;
     sf::Color c;
     switch (type) {
         case PowerupType::FASTER:
@@ -28,6 +29,13 @@ void Powerup::activate() {
     this->active = true;
 }
 
+void Powerup::update_animation() {
+    this->animation_counter++;
+    double dy = ANIMATION_AMPLITUDE*sin((double)this->animation_counter*ANIMATION_SPEED);
+    auto curr_x = this->shape.getPosition().x;
+    auto curr_y = this->shape.getPosition().y;
+    this->shape.setPosition(curr_x, curr_y + dy);
+}
 
 void Powerup::update_progress() {
     this->bar.set_progress(this->clock.getElapsedTime().asSeconds() / POWERUP_TIME);
