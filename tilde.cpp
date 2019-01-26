@@ -320,7 +320,7 @@ int main() {
                     }
                 }
                 size_t empty_boxes = available_indices.size();
-                if (empty_boxes > 1) {
+                if (empty_boxes > 0) {
                     p.boxes[available_indices[rand() % empty_boxes]].filled = true;
                 }
             }
@@ -333,7 +333,7 @@ int main() {
         window.clear(sf::Color::Black);
         window.draw(background_sprite);
         for (int i = 0; i < 4; i++) {
-            window.draw(players[i].house);
+            window.draw(players[i].house_sprite);
 
             for (auto box : players[i].boxes) {
                 window.draw(box.shape);
@@ -351,7 +351,7 @@ int main() {
             text.setString(std::to_string(players[i].score));
             text.setCharacterSize(50);
             text.setPosition(players[i].house.getPosition() + sf::Vector2f(0, 15));
-            window.draw(text);
+            //window.draw(text);
         }
         for (auto p : players) {
             float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
@@ -362,7 +362,6 @@ int main() {
             if (!p.moving) {
                 frame = 1;
             }
-            window.draw(p.house_sprite);
             p.sprite.setTextureRect(sf::IntRect(frame * 16, (int)p.direction * 18, 16, 18));
             window.draw(p.sprite);
         }

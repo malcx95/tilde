@@ -29,10 +29,10 @@ Player::Player(
         boxes[i].shape.setFillColor(sf::Color(50, 50, 50));
 
         if (i < NUM_BOXES / 2) {
-            sf::Vector2f offset(10 + i * item_spacing, 10);
+            sf::Vector2f offset(10 + i * item_spacing, 25);
             boxes[i].shape.setPosition(house_pos + offset);
         } else {
-            sf::Vector2f offset(10 + (i - NUM_BOXES / 2) * item_spacing, HOUSE_HEIGHT - 30);
+            sf::Vector2f offset(10 + (i - NUM_BOXES / 2) * item_spacing, HOUSE_HEIGHT - 45);
             boxes[i].shape.setPosition(house_pos + offset);
         }
     }
