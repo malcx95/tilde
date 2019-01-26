@@ -9,6 +9,7 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position)
       bar{PROGRESSBAR_WIDTH, PROGRESSBAR_HEIGHT} {
     this->shape.setPosition(position);
     this->active = false;
+    this->shape.setOrigin(POWERUP_WIDTH, POWERUP_WIDTH);
     sf::Color c;
     switch (type) {
     case PowerupType::FASTER:

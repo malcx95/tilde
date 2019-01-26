@@ -6,10 +6,7 @@
 #include "constants.hpp"
 #include "powerup.hpp"
 
-const unsigned int HOUSE_WIDTH = 200;
-const unsigned int HOUSE_HEIGHT = 100;
-
-const unsigned int PLAYER_RADIUS = 10;
+const unsigned int PLAYER_RADIUS = 8;
 
 const unsigned int NUM_BOXES = 10;
 
@@ -44,7 +41,6 @@ struct Player {
     sf::Sprite sprite;
     sf::CircleShape shape;
     sf::Sprite house_sprite;
-    sf::RectangleShape house;
     std::vector<Box> boxes;
     Item* carried_item;
 
