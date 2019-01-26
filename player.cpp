@@ -7,6 +7,7 @@ Player::Player(unsigned int index,
     this->score = 0;
     this->stunned = false;
     this->carried_item = nullptr;
+    this->powerup = nullptr;
 
     this->house = sf::RectangleShape{sf::Vector2f{HOUSE_WIDTH, HOUSE_HEIGHT}};
     this->house.setPosition(house_pos);
@@ -20,6 +21,9 @@ Player::Player(unsigned int index,
 }
 
 void Player::set_position(sf::Vector2f position) {
+    // if (this->powerup != nullptr) {
+    //     this->powerup->shape.setPosition(position);
+    // }
     if (this->carried_item != nullptr) {
         this->carried_item->shape.setPosition(position);
     }
@@ -27,6 +31,9 @@ void Player::set_position(sf::Vector2f position) {
 }
 
 void Player::move(float dx, float dy) {
+    // if (this->powerup != nullptr) {
+    //     this->powerup->shape.move(dx, dy);
+    // }
     if (this->carried_item != nullptr) {
         this->carried_item->shape.move(dx, dy);
     }

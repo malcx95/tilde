@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include "item.hpp"
 #include "constants.hpp"
+#include "powerup.hpp"
 
 const unsigned int HOUSE_WIDTH = 200;
 const unsigned int HOUSE_HEIGHT = 100;
@@ -32,6 +33,8 @@ struct Player {
     sf::RectangleShape house;
 
     Item* carried_item;
+
+    Powerup* powerup;
 
     void set_position(sf::Vector2f position);
     void move(float dx, float dy);

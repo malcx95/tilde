@@ -6,12 +6,14 @@
 #include "config.h"
 #include "player.hpp"
 #include "constants.hpp"
+#include "powerup.hpp"
 #include "item.hpp"
 
 const unsigned int ITEM_SCORE = 10;
-const unsigned int NUM_PLAYERS = 4;
 const float PLAYER_SPEED = 80.f;
 const int WIN_SCORE = 100;
+const float ITEM_SPAWN_INTERVAL = 5.0f;
+const float POWERUP_SPAWN_INTERVAL = 1.0;
 
 
 // SFML doesn't support scancodes...
@@ -57,7 +59,8 @@ void handle_item_pickup(std::vector<Player>& players,
             auto boundingBox = p.shape.getGlobalBounds();
             for (Item* item : items) {
 
-                if (!item->being_carried && boundingBox.intersects(item->shape.getGlobalBounds())) {
+                if (!item->being_carried && 
+                        boundingBox.intersects(item->shape.getGlobalBounds())) {
                     p.carried_item = item;
 
                     // TODO maybe remove
@@ -91,6 +94,75 @@ void handle_item_stealing(std::vector<Player>& players) {
 }
 
 
+void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
+    size_t index = 0;
+    for (size_t i = 0; i < powerups.size(); ++i) {
+        if (powerups[i] == powerup) {
+            index = i;
+            break;
+        }
+    }
+    powerups.erase(powerups.begin() + index);
+    delete powerup;
+}
+
+bool is_free_to_place(Powerup* powerup, 
+        std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.house.getGlobalBounds().intersects(
+                    powerup->shape.getGlobalBounds())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void spawn_powerup(std::vector<Powerup*>& powerups, 
+        std::vector<Player>& players) {
+    if (powerups.size() < MAX_NUM_POWERUPS) {
+        PowerupType type = (PowerupType)(rand() % NUM_POWERUP_TYPES);
+        Powerup* p = new Powerup{type, sf::Vector2f{0, 0}};
+        unsigned int rand_x;
+        unsigned int rand_y;
+        do {
+            rand_x = (unsigned int)(rand() % WINDOW_WIDTH);
+            rand_y = (unsigned int)(rand() % WINDOW_HEIGHT);
+            p->shape.setPosition(rand_x, rand_y);
+        } while (!is_free_to_place(p, players));
+        std::cout << "Spawned powerup at " << rand_x << ", " << rand_y << std::endl;
+        powerups.push_back(p);
+    }
+}
+
+void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.powerup == nullptr) {
+            auto bb = p.shape.getGlobalBounds();
+            for (Powerup* powerup : powerups) {
+
+                if (!powerup->active && 
+                        bb.intersects(powerup->shape.getGlobalBounds())) {
+                    p.powerup = powerup;
+                    p.powerup->activate();
+                    std::cout << "Picked up powerup" << std::endl;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.powerup == nullptr) continue;
+        if (p.powerup->should_deactivate()) {
+            remove_powerup(powerups, p.powerup);
+            p.powerup = nullptr;
+            std::cout << "Removed powerup" << std::endl;
+        }
+    }
+}
+
 int main() {
     srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
@@ -110,11 +182,12 @@ int main() {
         WINDOW_HEIGHT - HOUSE_HEIGHT - WINDOW_MARGIN})
     };
 
-    float spawn_interval = 5.0f;
     std::vector<Item*> items;
+    std::vector<Powerup*> powerups;
 
     sf::Clock delta_clock;
     sf::Clock spawn_clock;
+    sf::Clock powerup_clock;
 
     while (window.isOpen()) {
         float dt = delta_clock.restart().asSeconds();
@@ -124,15 +197,23 @@ int main() {
                 window.close();
         }
 
-        if (spawn_clock.getElapsedTime().asSeconds() > spawn_interval) {
+        if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
             // defined in item.hpp
             spawn_item(items);
             spawn_clock.restart();
         }
 
+        if (powerup_clock.getElapsedTime().asSeconds() > POWERUP_SPAWN_INTERVAL) {
+            // defined in item.hpp
+            spawn_powerup(powerups, players);
+            powerup_clock.restart();
+        }
+
         handle_input(players, dt);
 
         handle_item_pickup(players, items);
+        handle_powerup_pickup(powerups, players);
+        update_powerups(powerups, players);
 
         handle_item_stealing(players);
 
@@ -166,6 +247,11 @@ int main() {
         }
         for (auto item : items) {
             window.draw(item->shape);
+        }
+        for (auto powerup : powerups) {
+            if (!powerup->active) {
+                window.draw(powerup->shape);
+            }
         }
 
         window.display();
