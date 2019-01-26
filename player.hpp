@@ -33,6 +33,7 @@ struct Player {
     unsigned int index;
     int score;
     bool stunned;
+    bool moving;
     Direction direction;
 
     sf::Sprite sprite;
@@ -45,7 +46,7 @@ struct Player {
     bool is_home() const;
 
     sf::Clock stun_clock;
-
+    sf::Clock animation_clock;
 };
 
 #endif /* ifndef PLAYER_H */
