@@ -7,6 +7,7 @@
 #include "item.hpp"
 
 const unsigned int ITEM_SCORE = 10;
+const int WIN_SCORE = 100;
 
 struct KeyConfig {
     sf::Keyboard::Key up;
@@ -103,7 +104,7 @@ int main() {
                 remove_item(items, p.carried_item);
                 p.carried_item = nullptr;
             }
-            if (p.score >= 100) {
+            if (p.score >= WIN_SCORE) {
                 std::cout << "player " << p.index << " won the game" << std::endl;
             }
         }
