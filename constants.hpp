@@ -8,7 +8,7 @@ const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
 const unsigned int WINDOW_MARGIN = 40;
 const float POWERUP_DESPAWN_TIMER = 20.0;
-const float ITEM_DROP_TIMER = 1.0;
+const float ITEM_DROP_TIMER = 3.0;
 
 struct KeyConfig {
     sf::Keyboard::Key up;

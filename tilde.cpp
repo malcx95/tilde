@@ -46,7 +46,7 @@ void handle_item_pickup(std::vector<Player>& players,
 
                 if (!item->being_carried &&
                     !item->in_box &&
-                    p.drop_clock.getElapsedTime().asSeconds() > ITEM_DROP_TIMER &&
+                    item->drop_clock.getElapsedTime().asSeconds() > ITEM_DROP_TIMER &&
                     boundingBox.intersects(item->sprite.getGlobalBounds())) {
                     p.carried_item = item;
 
@@ -63,9 +63,19 @@ void handle_item_dropping(Player& player) {
     Item* item = player.carried_item;
     if (item != nullptr) {
         item->being_carried = false;
+        item->sprite.setColor(sf::Color(255,255,255,100));
         player.carried_item = nullptr;
 
-        player.drop_clock.restart();
+        item->drop_clock.restart();
+    }
+}
+
+void handle_opaque_items(std::vector<Item*> items) {
+    for (Item* item : items) {
+        if (item->drop_clock.getElapsedTime().asSeconds() >= ITEM_DROP_TIMER &&
+            item->sprite.getColor().a < 255) {
+            item->sprite.setColor(sf::Color(255,255,255,255));
+        }
     }
 }
 
@@ -587,6 +597,8 @@ int main() {
             handle_fire(players, items);
 
             handle_stun(players);
+
+            handle_opaque_items(items);
 
             for (Player& p : players) {
                 if (p.carried_item != nullptr && p.is_home()) {
