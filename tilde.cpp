@@ -388,6 +388,10 @@ int main() {
     sf::Clock spawn_clock;
     sf::Clock powerup_clock;
 
+    bool js_connnected = sf::Joystick::isConnected(0);
+    unsigned int buttons = sf::Joystick::getButtonCount(0);
+    std::cout << js_connnected << ":" << buttons << std::endl;
+
     bool game_finished = false;
     std::string win_text = "";
     while (window.isOpen()) {
