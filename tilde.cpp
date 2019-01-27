@@ -43,11 +43,14 @@ void handle_item_pickup(std::vector<Player>& players,
         if (p.carried_item == nullptr) {
             auto boundingBox = p.shape.getGlobalBounds();
             for (Item* item : items) {
+                bool not_just_dropped =
+                    item->sprite.getColor().a == 255 || item->drop_clock.getElapsedTime().asSeconds() > ITEM_DROP_TIMER;
 
                 if (!item->being_carried &&
                     !item->in_box &&
-                    item->drop_clock.getElapsedTime().asSeconds() > ITEM_DROP_TIMER &&
-                    boundingBox.intersects(item->sprite.getGlobalBounds())) {
+                    not_just_dropped &&
+                    boundingBox.intersects(item->sprite.getGlobalBounds())
+                ) {
                     p.carried_item = item;
 
                     item->sprite.setPosition(p.sprite.getPosition());
