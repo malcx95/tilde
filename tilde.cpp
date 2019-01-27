@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <iostream>
 #include <vector>
 #include <stdio.h>
@@ -321,6 +322,11 @@ int main() {
     sf::Sprite background_sprite;
     background_sprite.setTextureRect(sf::IntRect(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
     background_sprite.setTexture(background_texture);
+
+    sf::Music music;
+    music.openFromFile("../assets/tilde.ogg");
+    music.setLoop(true);
+    music.play();
 
     float house_height = red_house_texture.getSize().y;
     float house_width = red_house_texture.getSize().x;
