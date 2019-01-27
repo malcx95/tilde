@@ -27,6 +27,7 @@ struct Powerup {
     PowerupType type;
 
     sf::Clock clock;
+    sf::Clock since_spawn;
 
     bool active;
 

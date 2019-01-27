@@ -210,11 +210,24 @@ void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
     delete powerup;
 }
 
+bool powerup_within_bounds(Powerup* powerup) {
+    float powerup_x_pos = powerup->sprite.getPosition().x;
+    float powerup_y_pos = powerup->sprite.getPosition().y;
+    sf::FloatRect powerup_bounds = powerup->sprite.getGlobalBounds();
+    if (powerup_x_pos < 0 + powerup_bounds.width/2 ||
+        powerup_y_pos < 0 + powerup_bounds.height/2 ||
+        powerup_x_pos > WINDOW_WIDTH - powerup_bounds.width ||
+        powerup_y_pos > WINDOW_HEIGHT - powerup_bounds.height) {
+        return false;
+    }
+    return true;
+}
+
 bool is_free_to_place(Powerup* powerup,
         std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.house_sprite.getGlobalBounds().intersects(
-                    powerup->sprite.getGlobalBounds())) {
+        if (p.house_sprite.getGlobalBounds().intersects(powerup->sprite.getGlobalBounds()) ||
+            !powerup_within_bounds(powerup)) {
             return false;
         }
     }
@@ -232,6 +245,7 @@ void spawn_powerup(std::vector<Powerup*>& powerups,
             rand_x = (unsigned int)(rand() % WINDOW_WIDTH);
             rand_y = (unsigned int)(rand() % WINDOW_HEIGHT);
             p->sprite.setPosition(rand_x, rand_y);
+            p->since_spawn.restart();
         } while (!is_free_to_place(p, players));
         powerups.push_back(p);
     }
@@ -263,6 +277,11 @@ void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& playe
         if (p.powerup->should_deactivate()) {
             remove_powerup(powerups, p.powerup);
             p.powerup = nullptr;
+        }
+    }
+    for (Powerup* powerup : powerups) {
+        if (powerup->since_spawn.getElapsedTime().asSeconds() >= POWERUP_DESPAWN_TIMER) {
+            remove_powerup(powerups, powerup);
         }
     }
 }
@@ -470,10 +489,6 @@ int main() {
     sf::Clock delta_clock;
     sf::Clock spawn_clock;
     sf::Clock powerup_clock;
-
-    bool js_connnected = sf::Joystick::isConnected(0);
-    unsigned int buttons = sf::Joystick::getButtonCount(0);
-    std::cout << js_connnected << ":" << buttons << std::endl;
 
     bool game_finished = false;
     std::string win_text = "";
