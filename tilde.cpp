@@ -13,7 +13,7 @@
 #include "item.hpp"
 #include "input.hpp"
 
-const float PLAYER_SPEED = 180.f;
+const float PLAYER_SPEED = 80.f;
 const float ITEM_SPAWN_INTERVAL = 5.0f;
 const float POWERUP_SPAWN_INTERVAL = 1.0;
 const float STUN_TIME = 3;
