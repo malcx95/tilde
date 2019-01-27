@@ -24,6 +24,10 @@ Powerup::Powerup(PowerupType type, sf::Vector2f position, PowerupTextures poweru
             this->sprite.setTexture(*powerup_textures.fire);
             c = sf::Color{255, 200, 50};
             break;
+        case PowerupType::STEALING:
+            this->sprite.setTexture(*powerup_textures.stealing);
+            c = sf::Color{40, 240, 180};
+            break;
     }
     this->bar.set_colors(c, sf::Color{50, 50, 50});
 }
@@ -33,12 +37,12 @@ void Powerup::activate() {
     this->active = true;
 }
 
-void Powerup::update_animation() {
+void Powerup::update_animation(float dt) {
     this->animation_counter++;
     double dy = ANIMATION_AMPLITUDE*sin((double)this->animation_counter*ANIMATION_SPEED);
     auto curr_x = this->sprite.getPosition().x;
     auto curr_y = this->sprite.getPosition().y;
-    this->sprite.setPosition(curr_x, curr_y + dy);
+    this->sprite.setPosition(curr_x, curr_y + dy*dt);
 }
 
 void Powerup::update_progress() {

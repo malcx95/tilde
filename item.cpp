@@ -3,8 +3,16 @@
 
 const int SPAWN_RADIUS = 150;
 
-void spawn_item(std::vector<Item*>& items) {
-    if (items.size() < MAX_ITEMS) {
+unsigned int num_stationary_items(std::vector<Item*>& items) {
+    unsigned int res = 0;
+    for (Item* it : items) {
+        if (!it->being_carried && !it->in_box) res++;
+    }
+    return res;
+}
+
+void spawn_item(std::vector<Item*>& items, std::vector<sf::Texture*> item_textures) {
+    if (num_stationary_items(items) < MAX_ITEMS) {
         Item* item = new Item;
 
         sf::Vector2f center(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
@@ -15,13 +23,13 @@ void spawn_item(std::vector<Item*>& items) {
             random_radius * sin(random_angle)
         );
 
-        sf::CircleShape shape(10, 3);
-        shape.setOrigin(10, 10);
-        shape.setPosition(center + offset);
-        shape.setFillColor(sf::Color(200, 255, 255));
+        int random_item = int(rand() % item_textures.size());
+        item->sprite.setTexture(*item_textures[random_item]);
+        item->sprite.setOrigin(10,10);
+        item->sprite.setPosition(center + offset);
 
-        item->shape = shape;
         item->being_carried = false;
+        item->in_box = false;
 
         items.push_back(item);
     }

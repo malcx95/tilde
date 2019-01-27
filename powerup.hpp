@@ -5,8 +5,8 @@
 #include "progressbar.hpp"
 #include "constants.hpp"
 
-const unsigned int NUM_POWERUP_TYPES = 3;
-enum PowerupType { IMMUNITY, FASTER, FIRE };
+const unsigned int NUM_POWERUP_TYPES = 4;
+enum PowerupType { IMMUNITY, FASTER, FIRE, STEALING };
 
 const float POWERUP_TIME = 5.0;
 const unsigned int POWERUP_WIDTH = 6;
@@ -17,8 +17,8 @@ const unsigned int PROGRESSBAR_HEIGHT = 5;
 
 const float SPEED_INCREASE = 2.;
 
-const double ANIMATION_SPEED = 0.01;
-const double ANIMATION_AMPLITUDE = .04;
+const double ANIMATION_SPEED = .01;
+const double ANIMATION_AMPLITUDE = 5.;
 
 struct Powerup {
 
@@ -27,6 +27,7 @@ struct Powerup {
     PowerupType type;
 
     sf::Clock clock;
+    sf::Clock since_spawn;
 
     bool active;
 
@@ -38,7 +39,7 @@ struct Powerup {
 
     void update_progress();
 
-    void update_animation();
+    void update_animation(float dt);
 
     unsigned long animation_counter;
 

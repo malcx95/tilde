@@ -5,6 +5,7 @@
 #include "item.hpp"
 #include "constants.hpp"
 #include "powerup.hpp"
+#include "input.hpp"
 
 const unsigned int PLAYER_RADIUS = 8;
 
@@ -14,11 +15,12 @@ const unsigned int PROGRESSBAR_DISTANCE = 10;
 const unsigned int ITEM_SPACING = 40;
 
 struct Box {
-    Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false}, on_fire{false} {}
+    Box(sf::Vector2f pos) : shape{sf::RectangleShape{sf::Vector2f(pos)}}, filled{false}, on_fire{false}, item{nullptr} {}
     sf::RectangleShape shape;
     sf::Clock fire_clock;
     bool filled;
     bool on_fire;
+    Item* item;
 };
 
 enum Direction { Up, Right, Down, Left };
@@ -26,13 +28,14 @@ enum Direction { Up, Right, Down, Left };
 struct Player {
     Player(
         unsigned int index,
-        KeyConfig config,
         sf::Vector2f house_pos,
         sf::Texture* texture,
         sf::Texture* house_texture
     );
 
-    KeyConfig key_config;
+    input::InputHandler* input_handler;
+    bool connected;
+
     unsigned int index;
     bool stunned;
     bool moving;

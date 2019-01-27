@@ -11,6 +11,7 @@
 #include "constants.hpp"
 #include "powerup.hpp"
 #include "item.hpp"
+#include "input.hpp"
 
 const float PLAYER_SPEED = 80.f;
 const float ITEM_SPAWN_INTERVAL = 5.0f;
@@ -45,16 +46,16 @@ void handle_input(std::vector<Player>& players, float dt) {
         }
 
         sf::Vector2f dir;
-        if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
+        if (p.input_handler->get_value(input::Action::UP) > 0.5) {
             dir.y -= 1;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
+        if (p.input_handler->get_value(input::Action::DOWN) > 0.5) {
             dir.y += 1;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
+        if (p.input_handler->get_value(input::Action::LEFT) > 0.5) {
             dir.x -= 1;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
+        if (p.input_handler->get_value(input::Action::RIGHT) > 0.5) {
             dir.x += 1;
         }
 
@@ -110,11 +111,11 @@ void handle_item_pickup(std::vector<Player>& players,
             for (Item* item : items) {
 
                 if (!item->being_carried &&
-                        boundingBox.intersects(item->shape.getGlobalBounds())) {
+                        !item->in_box &&
+                        boundingBox.intersects(item->sprite.getGlobalBounds())) {
                     p.carried_item = item;
 
-                    // TODO maybe remove
-                    item->shape.setPosition(p.sprite.getPosition());
+                    item->sprite.setPosition(p.sprite.getPosition());
                     item->being_carried = true;
                     break;
                 }
@@ -138,7 +139,7 @@ void handle_item_stealing(std::vector<Player>& players) {
             if (player_bounds.intersects(enemy.shape.getGlobalBounds())) {
                 if (p.carried_item != nullptr && !enemy.stunned && enemy.carried_item == nullptr) {
                     enemy.carried_item = p.carried_item;
-                    enemy.carried_item->shape.setPosition(enemy.shape.getPosition());
+                    enemy.carried_item->sprite.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
 
                     p.stun_clock.restart().asSeconds();
@@ -150,7 +151,7 @@ void handle_item_stealing(std::vector<Player>& players) {
     }
 }
 
-void handle_fire(std::vector<Player>& players) {
+void handle_fire(std::vector<Player>& players, std::vector<Item*>& items) {
     for (Player& p : players) {
         // Light items that player walks on
         if (p.powerup != nullptr && p.powerup->type == PowerupType::FIRE) {
@@ -179,6 +180,8 @@ void handle_fire(std::vector<Player>& players) {
                 if (box.fire_clock.getElapsedTime().asSeconds() > BURN_TIME) {
                     box.filled = false;
                     box.on_fire = false;
+                    remove_item(items, box.item);
+                    box.item = nullptr;
                 }
             }
         }
@@ -208,11 +211,24 @@ void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
     delete powerup;
 }
 
+bool powerup_within_bounds(Powerup* powerup) {
+    float powerup_x_pos = powerup->sprite.getPosition().x;
+    float powerup_y_pos = powerup->sprite.getPosition().y;
+    sf::FloatRect powerup_bounds = powerup->sprite.getGlobalBounds();
+    if (powerup_x_pos < 0 + powerup_bounds.width/2 ||
+        powerup_y_pos < 0 + powerup_bounds.height/2 ||
+        powerup_x_pos > WINDOW_WIDTH - powerup_bounds.width ||
+        powerup_y_pos > WINDOW_HEIGHT - powerup_bounds.height) {
+        return false;
+    }
+    return true;
+}
+
 bool is_free_to_place(Powerup* powerup,
         std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.house_sprite.getGlobalBounds().intersects(
-                    powerup->sprite.getGlobalBounds())) {
+        if (p.house_sprite.getGlobalBounds().intersects(powerup->sprite.getGlobalBounds()) ||
+            !powerup_within_bounds(powerup)) {
             return false;
         }
     }
@@ -230,6 +246,7 @@ void spawn_powerup(std::vector<Powerup*>& powerups,
             rand_x = (unsigned int)(rand() % WINDOW_WIDTH);
             rand_y = (unsigned int)(rand() % WINDOW_HEIGHT);
             p->sprite.setPosition(rand_x, rand_y);
+            p->since_spawn.restart();
         } while (!is_free_to_place(p, players));
         powerups.push_back(p);
     }
@@ -263,13 +280,123 @@ void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& playe
             p.powerup = nullptr;
         }
     }
+    for (Powerup* powerup : powerups) {
+        if (powerup->since_spawn.getElapsedTime().asSeconds() >= POWERUP_DESPAWN_TIMER) {
+            remove_powerup(powerups, powerup);
+        }
+    }
 }
 
-void update_powerup_animations(std::vector<Powerup*>& powerups) {
+void update_powerup_animations(std::vector<Powerup*>& powerups, float dt) {
     for (Powerup* p : powerups) {
         if (!p->active) {
-            p->update_animation();
+            p->update_animation(dt);
         }
+    }
+}
+
+void handle_stealing_from_house(std::vector<Player>& players) {
+    for (Player& p : players) {
+        if (p.powerup == nullptr || p.carried_item != nullptr ||
+                p.powerup->type != PowerupType::STEALING) continue;
+        auto bb = p.shape.getGlobalBounds();
+        for (Player& enemy : players) {
+            for (Box& box: enemy.boxes) {
+                if (box.item != nullptr &&
+                    bb.intersects(box.item->sprite.getGlobalBounds())) {
+                    box.filled = false;
+                    Item* item = box.item;
+                    box.item = nullptr;
+                    p.carried_item = item;
+                    item->sprite.setOrigin(10, 10);
+                    item->being_carried = true;
+                    item->in_box = false;
+                    item->sprite.setPosition(p.sprite.getPosition());
+                    return;
+                }
+            }
+        }
+    }
+}
+
+
+void game_startup(std::vector<Player>& players, sf::RenderWindow& window,
+        sf::Font& font, sf::Sprite& background,
+        std::vector<input::InputHandler*> handlers) {
+    sf::Text welcome_text;
+    welcome_text.setFont(font);
+    welcome_text.setString("Welcome to ~!\nPress the up key on your controller or keyboard to join.\nPress Enter or START to start");
+    welcome_text.setPosition(WINDOW_WIDTH/10, WINDOW_HEIGHT/3);
+    unsigned int curr_player = 0;
+    while (window.isOpen()) {
+        // only add new players if there are less than 4 current players
+        if (curr_player < 4) {
+            for (auto handler : handlers) {
+                // add player if this handler presses up
+                if (handler->is_connected() &&
+                        !handler->in_use &&
+                        handler->get_value(input::Action::UP) > 0.5) {
+                    std::cout << "Player " << curr_player << " connected" << std::endl;
+                    Player& p = players[curr_player];
+                    p.input_handler = handler;
+                    handler->in_use = true;
+                    p.connected = true;
+                    curr_player++;
+                }
+            }
+        }
+
+
+        window.draw(background);
+        window.draw(welcome_text);
+        for (Player& p : players) {
+            // only draw connected ones
+            if (p.connected) {
+                if (p.input_handler->get_value(input::Action::UP) > 0.5) {
+                    p.house_sprite.setScale(1.05, 1.05);
+                } else {
+                    p.house_sprite.setScale(1, 1);
+                }
+                window.draw(p.house_sprite);
+            }
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Return)) {
+            // remove not used players and start game
+            while (players.size() != curr_player) {
+                players.erase(players.begin() + curr_player);
+                std::cout << "removed player" << std::endl;
+            }
+            std::cout << players.size() << " joined" << std::endl;
+            return;
+        }
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+        window.display();
+    }
+}
+
+void initialize_input_handlers(std::vector<input::InputHandler*>& handlers) {
+    for (KeyConfig& c : PLAYER_KEYS) {
+        auto handler = new input::KeyboardInputHandler(
+                c.up, c.down, c.left, c.right);
+        handlers.push_back(handler);
+    }
+
+    // for some reason, controller 0 and 1 are always connected and press up
+    for (int i = 2; i < 8; ++i) {
+        auto handler = new input::ControllerInputHandler(i);
+        handlers.push_back(handler);
+    }
+}
+
+void destroy_handlers(std::vector<input::InputHandler*>& handlers) {
+    for (auto handler: handlers) {
+        delete handler;
     }
 }
 
@@ -303,14 +430,33 @@ int main() {
     sf::Texture speed_texture;
     sf::Texture immunity_texture;
     sf::Texture fire_texture;
+    sf::Texture stealing_texture;
     speed_texture.loadFromFile("../assets/speed.png");
     immunity_texture.loadFromFile("../assets/immunity.png");
     fire_texture.loadFromFile("../assets/fire.png");
+    stealing_texture.loadFromFile("../assets/stealing.png");
 
     PowerupTextures powerup_textures;
     powerup_textures.speed = &speed_texture;
     powerup_textures.immunity = &immunity_texture;
     powerup_textures.fire = &fire_texture;
+    powerup_textures.stealing = &stealing_texture;
+
+    sf::Texture chair_texture;
+    sf::Texture fridge_texture;
+    sf::Texture tv_texture;
+    sf::Texture plant_texture;
+    chair_texture.loadFromFile("../assets/chair.png");
+    fridge_texture.loadFromFile("../assets/fridge.png");
+    tv_texture.loadFromFile("../assets/tv.png");
+    plant_texture.loadFromFile("../assets/plant.png");
+
+    std::vector<sf::Texture*> item_textures = {
+        &chair_texture,
+        &fridge_texture,
+        &tv_texture,
+        &plant_texture
+    };
 
     sf::Texture burning_texture;
     burning_texture.loadFromFile("../assets/Fiyah.png");
@@ -331,16 +477,17 @@ int main() {
     float house_height = red_house_texture.getSize().y;
     float house_width = red_house_texture.getSize().x;
     std::vector<Player> players = {
-        Player(0, PLAYER_KEYS[0],
-               sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
-        Player(1, PLAYER_KEYS[1],
-               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
-        Player(2, PLAYER_KEYS[2],
-               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
-        Player(3, PLAYER_KEYS[3],
-               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
+        Player(0, sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
+        Player(1, sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
+        Player(2, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
+        Player(3, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
                                 WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
     };
+
+    window.draw(background_sprite);
+    std::vector<input::InputHandler*> handlers;
+    initialize_input_handlers(handlers);
+    game_startup(players, window, font, background_sprite, handlers);
 
     std::vector<Item*> items;
     std::vector<Powerup*> powerups;
@@ -360,7 +507,7 @@ int main() {
         }
 
         if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
-            spawn_item(items);
+            spawn_item(items, item_textures);
             spawn_clock.restart();
         }
 
@@ -374,17 +521,24 @@ int main() {
         handle_item_pickup(players, items);
         handle_powerup_pickup(powerups, players);
         update_powerups(powerups, players);
-        update_powerup_animations(powerups);
+        update_powerup_animations(powerups, dt);
+
+        handle_stealing_from_house(players);
 
         handle_item_stealing(players);
-        handle_fire(players);
+        handle_fire(players, items);
 
         handle_stun(players);
+        
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
-                remove_item(items, p.carried_item);
+                //remove_item(items, p.carried_item);
+                Item* item = p.carried_item;
                 p.carried_item = nullptr;
+
+                item->in_box = true;
+                item->being_carried = false;
 
                 // Fill a random box
                 std::vector<size_t> available_indices;
@@ -395,7 +549,12 @@ int main() {
                 }
                 size_t empty_boxes = available_indices.size();
                 if (empty_boxes > 0) {
-                    p.boxes[available_indices[rand() % empty_boxes]].filled = true;
+                    Box* b = &p.boxes[available_indices[rand() % empty_boxes]];
+                    item->sprite.setOrigin(0, 0);
+                    item->sprite.setPosition(
+                            b->shape.getPosition());
+                    b->filled = true;
+                    b->item = item;
                 }
                 if (empty_boxes == 1 && !game_finished) {
                     win_text = "player " + std::to_string(p.index) + " won the game!";
@@ -404,20 +563,22 @@ int main() {
             }
         }
 
+        struct PowerupTextures {
+            sf::Texture* speed;
+            sf::Texture* immunity;
+            sf::Texture* fire;
+        };
         // Drawing
         window.clear(sf::Color::Black);
         window.draw(background_sprite);
-        for (int i = 0; i < 4; i++) {
-            window.draw(players[i].house_sprite);
+        for (Player& player : players) {
+            window.draw(player.house_sprite);
 
-            for (auto box : players[i].boxes) {
+            for (auto box : player.boxes) {
                 window.draw(box.shape);
 
                 if (box.filled) {
-                    sf::CircleShape shape(10, 3);
-                    shape.setPosition(box.shape.getPosition());
-                    shape.setFillColor(sf::Color(200, 255, 255));
-                    window.draw(shape);
+                    window.draw(box.item->sprite);
                 }
 
                 if (box.on_fire) {
@@ -444,7 +605,10 @@ int main() {
             window.draw(p.sprite);
         }
         for (auto item : items) {
-            window.draw(item->shape);
+            // we draw those in boxes earlier
+            if (!item->in_box) {
+                window.draw(item->sprite);
+            }
         }
         for (auto powerup : powerups) {
             if (!powerup->active) {

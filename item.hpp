@@ -7,11 +7,12 @@
 const int MAX_ITEMS = 10;
 
 struct Item {
-    sf::CircleShape shape;
     bool being_carried;
+    bool in_box;
+    sf::Sprite sprite;
 };
 
-void spawn_item(std::vector<Item*>& items);
+void spawn_item(std::vector<Item*>& items, std::vector<sf::Texture*> item_textures);
 
 void remove_item(std::vector<Item*>& items, Item* item);
 
