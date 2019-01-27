@@ -153,7 +153,7 @@ void handle_input(std::vector<Player>& players, float dt) {
 
 
 
-void handle_item_stealing(std::vector<Player>& players) {
+void handle_item_stealing(std::vector<Player>& players, sf::Sound hitsounds[4]) {
     for (Player& p : players) {
         if (p.powerup != nullptr &&
                 p.powerup->type == PowerupType::IMMUNITY) {
@@ -169,6 +169,8 @@ void handle_item_stealing(std::vector<Player>& players) {
                     enemy.carried_item = p.carried_item;
                     enemy.carried_item->sprite.setPosition(enemy.shape.getPosition());
                     p.carried_item = nullptr;
+
+                    hitsounds[rand() % 4].play();
 
                     p.stun_clock.restart().asSeconds();
                     p.stunned = true;
@@ -524,6 +526,13 @@ int main() {
     background_sprite.setTextureRect(sf::IntRect(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
     background_sprite.setTexture(background_texture);
 
+    sf::SoundBuffer player_hit_sound_buffers[4];
+    sf::Sound player_hit_sounds[4];
+    for (int i = 0; i < 4; i++) {
+        player_hit_sound_buffers[i].loadFromFile("../assets/hitplayer" + std::to_string(i + 1) + ".ogg");
+        player_hit_sounds[i].setBuffer(player_hit_sound_buffers[i]);
+    }
+
     sf::Music music;
     music.openFromFile("../assets/tilde.ogg");
     music.setLoop(true);
@@ -596,7 +605,7 @@ int main() {
 
             handle_stealing_from_house(players);
 
-            handle_item_stealing(players);
+            handle_item_stealing(players, player_hit_sounds);
             handle_fire(players, items);
 
             handle_stun(players);
