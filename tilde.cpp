@@ -324,8 +324,8 @@ void game_startup(std::vector<Player>& players, sf::RenderWindow& window,
         std::vector<input::InputHandler*> handlers) {
     sf::Text welcome_text;
     welcome_text.setFont(font);
-    welcome_text.setString("Welcome to ~!\nPress the up key on your controller or keyboard to join.\nPress Enter or START to start");
-    welcome_text.setPosition(WINDOW_WIDTH/10, WINDOW_HEIGHT/3);
+    welcome_text.setString("Welcome to ~!\nPress the up key on your controller or keyboard to join.\nPress Enter to start");
+    welcome_text.setPosition(WINDOW_WIDTH/20, WINDOW_HEIGHT/3);
     unsigned int curr_player = 0;
     while (window.isOpen()) {
         // only add new players if there are less than 4 current players
