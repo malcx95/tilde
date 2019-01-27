@@ -22,19 +22,51 @@ const float BURN_TIME = 5;
 // SFML doesn't support scancodes...
 #ifdef COLEMAK
 KeyConfig PLAYER_KEYS[] = {
-    KeyConfig { sf::Keyboard::Up, sf::Keyboard::Down, sf::Keyboard::Left, sf::Keyboard::Right },
-    KeyConfig { sf::Keyboard::W, sf::Keyboard::R, sf::Keyboard::A, sf::Keyboard::S },
-    KeyConfig { sf::Keyboard::G, sf::Keyboard::D, sf::Keyboard::T, sf::Keyboard::H },
-    KeyConfig { sf::Keyboard::U, sf::Keyboard::E, sf::Keyboard::N, sf::Keyboard::I }
+                           KeyConfig { sf::Keyboard::Up, sf::Keyboard::Down, sf::Keyboard::Left, sf::Keyboard::Right, sf::Keyboard::RShift },
+                           KeyConfig { sf::Keyboard::W, sf::Keyboard::R, sf::Keyboard::A, sf::Keyboard::S, sf::Keyboard::Q },
+                           KeyConfig { sf::Keyboard::G, sf::Keyboard::D, sf::Keyboard::T, sf::Keyboard::H, sf::Keyboard::P },
+                           KeyConfig { sf::Keyboard::U, sf::Keyboard::E, sf::Keyboard::N, sf::Keyboard::I, sf::Keyboard::L }
 };
 #else
 KeyConfig PLAYER_KEYS[] = {
-    KeyConfig { sf::Keyboard::Up, sf::Keyboard::Down, sf::Keyboard::Left, sf::Keyboard::Right },
-    KeyConfig { sf::Keyboard::W, sf::Keyboard::S, sf::Keyboard::A, sf::Keyboard::D },
-    KeyConfig { sf::Keyboard::I, sf::Keyboard::K, sf::Keyboard::J, sf::Keyboard::L },
-    KeyConfig { sf::Keyboard::T, sf::Keyboard::G, sf::Keyboard::F, sf::Keyboard::H }
+                           KeyConfig { sf::Keyboard::Up, sf::Keyboard::Down, sf::Keyboard::Left, sf::Keyboard::Right, sf::Keyboard::RShift  },
+                           KeyConfig { sf::Keyboard::W, sf::Keyboard::S, sf::Keyboard::A, sf::Keyboard::D, sf::Keyboard::Q },
+                           KeyConfig { sf::Keyboard::I, sf::Keyboard::K, sf::Keyboard::J, sf::Keyboard::L, sf::Keyboard::U },
+                           KeyConfig { sf::Keyboard::T, sf::Keyboard::G, sf::Keyboard::F, sf::Keyboard::H, sf::Keyboard::R }
 };
 #endif
+
+void handle_item_pickup(std::vector<Player>& players,
+                        std::vector<Item*>& items) {
+    for (Player& p : players) {
+        if (p.carried_item == nullptr) {
+            auto boundingBox = p.shape.getGlobalBounds();
+            for (Item* item : items) {
+
+                if (!item->being_carried &&
+                    !item->in_box &&
+                    p.drop_clock.getElapsedTime().asSeconds() > ITEM_DROP_TIMER &&
+                    boundingBox.intersects(item->sprite.getGlobalBounds())) {
+                    p.carried_item = item;
+
+                    item->sprite.setPosition(p.sprite.getPosition());
+                    item->being_carried = true;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void handle_item_dropping(Player& player) {
+    Item* item = player.carried_item;
+    if (item != nullptr) {
+        item->being_carried = false;
+        player.carried_item = nullptr;
+
+        player.drop_clock.restart();
+    }
+}
 
 
 void handle_input(std::vector<Player>& players, float dt) {
@@ -56,6 +88,9 @@ void handle_input(std::vector<Player>& players, float dt) {
         }
         if (p.input_handler->get_value(input::Action::RIGHT) > 0.5) {
             dir.x += 1;
+        }
+        if(p.input_handler->get_value(input::Action::DROP) > 0.5) {
+            handle_item_dropping(p);
         }
 
         // Prevent diagonal walking from being faster
@@ -102,26 +137,6 @@ void handle_input(std::vector<Player>& players, float dt) {
 }
 
 
-void handle_item_pickup(std::vector<Player>& players,
-                        std::vector<Item*>& items) {
-    for (Player& p : players) {
-        if (p.carried_item == nullptr) {
-            auto boundingBox = p.shape.getGlobalBounds();
-            for (Item* item : items) {
-
-                if (!item->being_carried &&
-                        !item->in_box &&
-                        boundingBox.intersects(item->sprite.getGlobalBounds())) {
-                    p.carried_item = item;
-
-                    item->sprite.setPosition(p.sprite.getPosition());
-                    item->being_carried = true;
-                    break;
-                }
-            }
-        }
-    }
-}
 
 
 void handle_item_stealing(std::vector<Player>& players) {
@@ -381,8 +396,7 @@ void game_startup(std::vector<Player>& players, sf::RenderWindow& window,
 
 void initialize_input_handlers(std::vector<input::InputHandler*>& handlers) {
     for (KeyConfig& c : PLAYER_KEYS) {
-        auto handler = new input::KeyboardInputHandler(
-                c.up, c.down, c.left, c.right);
+        auto handler = new input::KeyboardInputHandler(c.up, c.down, c.left, c.right, c.drop);
         handlers.push_back(handler);
     }
 
@@ -523,7 +537,7 @@ int main() {
         handle_fire(players, items);
 
         handle_stun(players);
-        
+
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {

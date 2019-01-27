@@ -6,7 +6,7 @@
 
 namespace input {
 
-    enum class Action { NONE, UP, DOWN, LEFT, RIGHT };
+    enum class Action { NONE, UP, DOWN, LEFT, RIGHT, DROP };
 
     class InputHandler {
     public:
@@ -24,7 +24,8 @@ namespace input {
                 sf::Keyboard::Key up,
                 sf::Keyboard::Key down,
                 sf::Keyboard::Key left,
-                sf::Keyboard::Key right
+                sf::Keyboard::Key right,
+                sf::Keyboard::Key drop
                 );
 
         virtual float get_value(const Action ac);

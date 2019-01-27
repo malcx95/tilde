@@ -55,6 +55,7 @@ struct Player {
 
     sf::Clock stun_clock;
     sf::Clock animation_clock;
+    sf::Clock drop_clock;
 };
 
 #endif /* ifndef PLAYER_H */

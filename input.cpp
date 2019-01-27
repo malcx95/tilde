@@ -6,12 +6,14 @@ KeyboardInputHandler::KeyboardInputHandler(
                 sf::Keyboard::Key up,
                 sf::Keyboard::Key down,
                 sf::Keyboard::Key left,
-                sf::Keyboard::Key right) {
+                sf::Keyboard::Key right,
+                sf::Keyboard::Key drop) {
     this->action_map = {
         {Action::UP, up},
         {Action::DOWN, down},
         {Action::LEFT, left},
-        {Action::RIGHT, right}
+        {Action::RIGHT, right},
+        {Action::DROP, drop}
     };
 }
 
@@ -55,6 +57,12 @@ float ControllerInputHandler::get_value(const Action ac) {
         case Action::NONE:
             return 0;
             break;
+        case Action::DROP:
+            if(sf::Joystick::isButtonPressed(this->id, 2)){
+                return 1;
+            }
+            break;
+
     }
     return 0;
 }
