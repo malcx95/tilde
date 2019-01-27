@@ -12,7 +12,7 @@
 #include "item.hpp"
 #include "input.hpp"
 
-const float PLAYER_SPEED = 80.f;
+const float PLAYER_SPEED = 180.f;
 const float ITEM_SPAWN_INTERVAL = 5.0f;
 const float POWERUP_SPAWN_INTERVAL = 1.0;
 const float STUN_TIME = 3;
@@ -280,7 +280,7 @@ void update_powerups(std::vector<Powerup*>& powerups, std::vector<Player>& playe
         }
     }
     for (Powerup* powerup : powerups) {
-        if (powerup->since_spawn.getElapsedTime().asSeconds() >= POWERUP_DESPAWN_TIMER) {
+        if (!powerup->active && powerup->since_spawn.getElapsedTime().asSeconds() >= POWERUP_DESPAWN_TIMER) {
             remove_powerup(powerups, powerup);
         }
     }
@@ -360,7 +360,8 @@ void game_startup(std::vector<Player>& players, sf::RenderWindow& window,
             }
         }
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Return)) {
+        if (curr_player > 0 && 
+                sf::Keyboard::isKeyPressed(sf::Keyboard::Return)) {
             // remove not used players and start game
             while (players.size() != curr_player) {
                 players.erase(players.begin() + curr_player);
@@ -397,6 +398,34 @@ void destroy_handlers(std::vector<input::InputHandler*>& handlers) {
     for (auto handler: handlers) {
         delete handler;
     }
+    while (handlers.size() > 0) {
+        handlers.erase(handlers.begin());
+    }
+}
+
+bool game_end_screen(unsigned int winner_id, sf::RenderWindow& window,
+        sf::Font font, sf::Sprite& background) {
+    sf::Text text;
+    text.setFont(font);
+    text.setString("Player " + std::to_string(winner_id) + " won!\nPress Enter to play again.");
+    text.setPosition(WINDOW_WIDTH/10, WINDOW_HEIGHT/3);
+    unsigned int curr_player = 0;
+    while (window.isOpen()) {
+        window.draw(background);
+        window.draw(text);
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Return)) {
+            return false;
+        }
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+        window.display();
+    }
+    return true;
 }
 
 int main() {
@@ -470,158 +499,177 @@ int main() {
 
     float house_height = red_house_texture.getSize().y;
     float house_width = red_house_texture.getSize().x;
-    std::vector<Player> players = {
-        Player(0, sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
-        Player(1, sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
-        Player(2, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
-        Player(3, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
-                                WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
-    };
 
-    window.draw(background_sprite);
     std::vector<input::InputHandler*> handlers;
-    initialize_input_handlers(handlers);
-    game_startup(players, window, font, background_sprite, handlers);
-
-    std::vector<Item*> items;
-    std::vector<Powerup*> powerups;
-
-    sf::Clock delta_clock;
-    sf::Clock spawn_clock;
-    sf::Clock powerup_clock;
 
     bool game_finished = false;
-    std::string win_text = "";
-    while (window.isOpen()) {
-        float dt = delta_clock.restart().asSeconds();
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
+    unsigned int winner_id = 0;
+
+    while (true) {
+        if (!window.isOpen()) break;
+
+        std::vector<Player> players = {
+            Player(0, sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
+            Player(1, sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
+            Player(2, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
+            Player(3, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
+                                    WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
+        };
+
+        if (game_finished) {
+            bool should_quit = game_end_screen(winner_id, window, font,
+                    background_sprite);
+            if (should_quit) break;
+            destroy_handlers(handlers);
+            game_finished = false;
         }
 
-        if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
-            spawn_item(items, item_textures);
-            spawn_clock.restart();
-        }
+        initialize_input_handlers(handlers);
+        window.draw(background_sprite);
+        game_startup(players, window, font, background_sprite, handlers);
 
-        if (powerup_clock.getElapsedTime().asSeconds() > POWERUP_SPAWN_INTERVAL) {
-            spawn_powerup(powerups, players, powerup_textures);
-            powerup_clock.restart();
-        }
+        std::vector<Item*> items;
+        std::vector<Powerup*> powerups;
 
-        handle_input(players, dt);
+        sf::Clock delta_clock;
+        sf::Clock spawn_clock;
+        sf::Clock powerup_clock;
 
-        handle_item_pickup(players, items);
-        handle_powerup_pickup(powerups, players);
-        update_powerups(powerups, players);
-        update_powerup_animations(powerups, dt);
+        std::string win_text = "";
+        while (window.isOpen() && !game_finished) {
 
-        handle_stealing_from_house(players);
+            float dt = delta_clock.restart().asSeconds();
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed)
+                    window.close();
+            }
 
-        handle_item_stealing(players);
-        handle_fire(players, items);
+            if (spawn_clock.getElapsedTime().asSeconds() > ITEM_SPAWN_INTERVAL) {
+                spawn_item(items, item_textures);
+                spawn_clock.restart();
+            }
 
-        handle_stun(players);
-        
+            if (powerup_clock.getElapsedTime().asSeconds() > POWERUP_SPAWN_INTERVAL) {
+                spawn_powerup(powerups, players, powerup_textures);
+                powerup_clock.restart();
+            }
 
-        for (Player& p : players) {
-            if (p.carried_item != nullptr && p.is_home()) {
-                //remove_item(items, p.carried_item);
-                Item* item = p.carried_item;
-                p.carried_item = nullptr;
+            handle_input(players, dt);
 
-                item->in_box = true;
-                item->being_carried = false;
+            handle_item_pickup(players, items);
+            handle_powerup_pickup(powerups, players);
+            update_powerups(powerups, players);
+            update_powerup_animations(powerups, dt);
 
-                // Fill a random box
-                std::vector<size_t> available_indices;
-                for (size_t i = 0; i < p.boxes.size(); i++) {
-                    if (!p.boxes[i].filled) {
-                        available_indices.push_back(i);
+            handle_stealing_from_house(players);
+
+            handle_item_stealing(players);
+            handle_fire(players, items);
+
+            handle_stun(players);
+            
+
+            for (Player& p : players) {
+                if (p.carried_item != nullptr && p.is_home()) {
+                    //remove_item(items, p.carried_item);
+                    Item* item = p.carried_item;
+                    p.carried_item = nullptr;
+
+                    item->in_box = true;
+                    item->being_carried = false;
+
+                    // Fill a random box
+                    std::vector<size_t> available_indices;
+                    for (size_t i = 0; i < p.boxes.size(); i++) {
+                        if (!p.boxes[i].filled) {
+                            available_indices.push_back(i);
+                        }
+                    }
+                    size_t empty_boxes = available_indices.size();
+                    if (empty_boxes > 0) {
+                        Box* b = &p.boxes[available_indices[rand() % empty_boxes]];
+                        item->sprite.setOrigin(0, 0);
+                        item->sprite.setPosition(
+                                b->shape.getPosition());
+                        b->filled = true;
+                        b->item = item;
+                    }
+                    if (empty_boxes == 1 && !game_finished) {
+                        win_text = "player " + std::to_string(p.index) + " won the game!";
+                        winner_id = p.index;
+                        game_finished = true;
                     }
                 }
-                size_t empty_boxes = available_indices.size();
-                if (empty_boxes > 0) {
-                    Box* b = &p.boxes[available_indices[rand() % empty_boxes]];
-                    item->sprite.setOrigin(0, 0);
-                    item->sprite.setPosition(
-                            b->shape.getPosition());
-                    b->filled = true;
-                    b->item = item;
-                }
-                if (empty_boxes == 1 && !game_finished) {
-                    win_text = "player " + std::to_string(p.index) + " won the game!";
-                    game_finished = true;
-                }
             }
-        }
 
-        struct PowerupTextures {
-            sf::Texture* speed;
-            sf::Texture* immunity;
-            sf::Texture* fire;
-        };
-        // Drawing
-        window.clear(sf::Color::Black);
-        window.draw(background_sprite);
-        for (Player& player : players) {
-            window.draw(player.house_sprite);
+            struct PowerupTextures {
+                sf::Texture* speed;
+                sf::Texture* immunity;
+                sf::Texture* fire;
+            };
+            // Drawing
+            window.clear(sf::Color::Black);
+            window.draw(background_sprite);
+            for (Player& player : players) {
+                window.draw(player.house_sprite);
 
-            for (auto box : player.boxes) {
-                window.draw(box.shape);
+                for (auto box : player.boxes) {
+                    window.draw(box.shape);
 
-                if (box.filled) {
-                    window.draw(box.item->sprite);
-                }
+                    if (box.filled) {
+                        window.draw(box.item->sprite);
+                    }
 
-                if (box.on_fire) {
-                    sf::Sprite fire_sprite;
-                    fire_sprite.setTexture(burning_texture);
-                    float time = box.fire_clock.getElapsedTime().asSeconds() * 8;
-                    int frame = (int)time % 6;
-                    fire_sprite.setTextureRect(sf::IntRect(frame * 10, 0, 10, 13));
-                    fire_sprite.setPosition(box.shape.getPosition() + sf::Vector2f(5, 5));
-                    window.draw(fire_sprite);
+                    if (box.on_fire) {
+                        sf::Sprite fire_sprite;
+                        fire_sprite.setTexture(burning_texture);
+                        float time = box.fire_clock.getElapsedTime().asSeconds() * 8;
+                        int frame = (int)time % 6;
+                        fire_sprite.setTextureRect(sf::IntRect(frame * 10, 0, 10, 13));
+                        fire_sprite.setPosition(box.shape.getPosition() + sf::Vector2f(5, 5));
+                        window.draw(fire_sprite);
+                    }
                 }
             }
-        }
-        for (auto p : players) {
-            float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
-            int frame = (int)time % 4;
-            if (frame == 3) {
-                frame = 1; // To get ping pong effect
+            for (auto p : players) {
+                float time = p.animation_clock.getElapsedTime().asSeconds() * 4;
+                int frame = (int)time % 4;
+                if (frame == 3) {
+                    frame = 1; // To get ping pong effect
+                }
+                if (!p.moving) {
+                    frame = 1;
+                }
+                p.sprite.setTextureRect(sf::IntRect(frame * 16, (int)p.direction * 18, 16, 18));
+                window.draw(p.sprite);
             }
-            if (!p.moving) {
-                frame = 1;
+            for (auto item : items) {
+                // we draw those in boxes earlier
+                if (!item->in_box) {
+                    window.draw(item->sprite);
+                }
             }
-            p.sprite.setTextureRect(sf::IntRect(frame * 16, (int)p.direction * 18, 16, 18));
-            window.draw(p.sprite);
-        }
-        for (auto item : items) {
-            // we draw those in boxes earlier
-            if (!item->in_box) {
-                window.draw(item->sprite);
+            for (auto powerup : powerups) {
+                if (!powerup->active) {
+                    window.draw(powerup->sprite);
+                } else {
+                    powerup->bar.draw(window);
+                }
             }
-        }
-        for (auto powerup : powerups) {
-            if (!powerup->active) {
-                window.draw(powerup->sprite);
-            } else {
-                powerup->bar.draw(window);
-            }
-        }
 
-        if (win_text != "") {
-            sf::Text text;
-            text.setFont(font);
-            text.setString(win_text);
-            text.setCharacterSize(60);
-            text.setPosition(sf::Vector2f(100, WINDOW_HEIGHT / 2 - 30));
-            window.draw(text);
-        }
+            if (win_text != "") {
+                sf::Text text;
+                text.setFont(font);
+                text.setString(win_text);
+                text.setCharacterSize(60);
+                text.setPosition(sf::Vector2f(100, WINDOW_HEIGHT / 2 - 30));
+                window.draw(text);
+            }
 
-        window.display();
+            window.display();
+        }
     }
+    destroy_handlers(handlers);
     return 0;
 }
