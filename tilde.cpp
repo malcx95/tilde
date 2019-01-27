@@ -254,18 +254,17 @@ void spawn_powerup(std::vector<Powerup*>& powerups,
 
 void handle_powerup_pickup(std::vector<Powerup*>& powerups, std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.powerup == nullptr) {
-            auto bb = p.shape.getGlobalBounds();
-            for (Powerup* powerup : powerups) {
-
-                if (!powerup->active &&
-                        bb.intersects(powerup->sprite.getGlobalBounds())) {
-                    p.powerup = powerup;
-                    p.powerup->activate();
-                    p.powerup->bar.set_position(p.sprite.getPosition()
-                            + sf::Vector2f{-(float)PROGRESSBAR_WIDTH/2, PROGRESSBAR_DISTANCE});
-                    break;
+        auto bb = p.shape.getGlobalBounds();
+        for (Powerup* powerup : powerups) {
+            if (!powerup->active && bb.intersects(powerup->sprite.getGlobalBounds())) {
+                if (p.powerup != nullptr) {
+                    remove_powerup(powerups, p.powerup);
                 }
+                p.powerup = powerup;
+                p.powerup->activate();
+                p.powerup->bar.set_position(p.sprite.getPosition()
+                                            + sf::Vector2f{-(float)PROGRESSBAR_WIDTH/2, PROGRESSBAR_DISTANCE});
+                break;
             }
         }
     }
