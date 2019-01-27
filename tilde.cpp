@@ -296,7 +296,7 @@ void update_powerup_animations(std::vector<Powerup*>& powerups, float dt) {
 
 void handle_stealing_from_house(std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.powerup == nullptr ||
+        if (p.powerup == nullptr || p.carried_item != nullptr ||
                 p.powerup->type != PowerupType::STEALING) continue;
         auto bb = p.shape.getGlobalBounds();
         for (Player& enemy : players) {
