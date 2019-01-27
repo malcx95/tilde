@@ -10,6 +10,7 @@
 #include "constants.hpp"
 #include "powerup.hpp"
 #include "item.hpp"
+#include "input.hpp"
 
 const float PLAYER_SPEED = 80.f;
 const float ITEM_SPAWN_INTERVAL = 5.0f;
@@ -44,16 +45,16 @@ void handle_input(std::vector<Player>& players, float dt) {
         }
 
         sf::Vector2f dir;
-        if (sf::Keyboard::isKeyPressed(p.key_config.up)) {
+        if (p.input_handler->get_value(input::Action::UP) > 0.5) {
             dir.y -= 1;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.down)) {
+        if (p.input_handler->get_value(input::Action::DOWN) > 0.5) {
             dir.y += 1;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.left)) {
+        if (p.input_handler->get_value(input::Action::LEFT) > 0.5) {
             dir.x -= 1;
         }
-        if (sf::Keyboard::isKeyPressed(p.key_config.right)) {
+        if (p.input_handler->get_value(input::Action::RIGHT) > 0.5) {
             dir.x += 1;
         }
 
@@ -298,6 +299,87 @@ void handle_stealing_from_house(std::vector<Player>& players) {
     }
 }
 
+
+void game_startup(std::vector<Player>& players, sf::RenderWindow& window,
+        sf::Font& font, sf::Sprite& background,
+        std::vector<input::InputHandler*> handlers) {
+    sf::Text welcome_text;
+    welcome_text.setFont(font);
+    welcome_text.setString("Welcome to ~!\nPress the up key on your controller or keyboard to join.\nPress Enter or START to start");
+    welcome_text.setPosition(WINDOW_WIDTH/10, WINDOW_HEIGHT/3);
+    unsigned int curr_player = 0;
+    while (window.isOpen()) {
+        // only add new players if there are less than 4 current players
+        if (curr_player < 4) {
+            for (auto handler : handlers) {
+                // add player if this handler presses up
+                if (handler->is_connected() &&
+                        !handler->in_use &&
+                        handler->get_value(input::Action::UP) > 0.5) {
+                    std::cout << "Player " << curr_player << " connected" << std::endl;
+                    Player& p = players[curr_player];
+                    p.input_handler = handler;
+                    handler->in_use = true;
+                    p.connected = true;
+                    curr_player++;
+                }
+            }
+        }
+
+
+        window.draw(background);
+        window.draw(welcome_text);
+        for (Player& p : players) {
+            // only draw connected ones
+            if (p.connected) {
+                if (p.input_handler->get_value(input::Action::UP) > 0.5) {
+                    p.house_sprite.setScale(1.05, 1.05);
+                } else {
+                    p.house_sprite.setScale(1, 1);
+                }
+                window.draw(p.house_sprite);
+            }
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Return)) {
+            // remove not used players and start game
+            while (players.size() != curr_player) {
+                players.erase(players.begin() + curr_player);
+                std::cout << "removed player" << std::endl;
+            }
+            std::cout << players.size() << " joined" << std::endl;
+            return;
+        }
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+        window.display();
+    }
+}
+
+void initialize_input_handlers(std::vector<input::InputHandler*>& handlers) {
+    for (KeyConfig& c : PLAYER_KEYS) {
+        auto handler = new input::KeyboardInputHandler(
+                c.up, c.down, c.left, c.right);
+        handlers.push_back(handler);
+    }
+
+    // for some reason, controller 0 and 1 are always connected and press up
+    for (int i = 2; i < 8; ++i) {
+        auto handler = new input::ControllerInputHandler(i);
+        handlers.push_back(handler);
+    }
+}
+
+void destroy_handlers(std::vector<input::InputHandler*>& handlers) {
+    for (auto handler: handlers) {
+        delete handler;
+    }
+}
+
 int main() {
     srand(time(NULL));
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "~");
@@ -370,16 +452,17 @@ int main() {
     float house_height = red_house_texture.getSize().y;
     float house_width = red_house_texture.getSize().x;
     std::vector<Player> players = {
-        Player(0, PLAYER_KEYS[0],
-               sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
-        Player(1, PLAYER_KEYS[1],
-               sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
-        Player(2, PLAYER_KEYS[2],
-               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
-        Player(3, PLAYER_KEYS[3],
-               sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
+        Player(0, sf::Vector2f{WINDOW_MARGIN, WINDOW_MARGIN}, &red_texture, &red_house_texture),
+        Player(1, sf::Vector2f{WINDOW_MARGIN, WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &green_texture, &green_house_texture),
+        Player(2, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN, WINDOW_MARGIN}, &blue_texture, &blue_house_texture),
+        Player(3, sf::Vector2f{WINDOW_WIDTH - house_width - WINDOW_MARGIN,
                                 WINDOW_HEIGHT - house_height - WINDOW_MARGIN}, &yellow_texture, &yellow_house_texture)
     };
+
+    window.draw(background_sprite);
+    std::vector<input::InputHandler*> handlers;
+    initialize_input_handlers(handlers);
+    game_startup(players, window, font, background_sprite, handlers);
 
     std::vector<Item*> items;
     std::vector<Powerup*> powerups;
@@ -425,6 +508,7 @@ int main() {
         handle_fire(players, items);
 
         handle_stun(players);
+        
 
         for (Player& p : players) {
             if (p.carried_item != nullptr && p.is_home()) {
@@ -466,10 +550,10 @@ int main() {
         // Drawing
         window.clear(sf::Color::Black);
         window.draw(background_sprite);
-        for (int i = 0; i < 4; i++) {
-            window.draw(players[i].house_sprite);
+        for (Player& player : players) {
+            window.draw(player.house_sprite);
 
-            for (auto box : players[i].boxes) {
+            for (auto box : player.boxes) {
                 window.draw(box.shape);
 
                 if (box.filled) {

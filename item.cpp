@@ -6,7 +6,7 @@ const int SPAWN_RADIUS = 150;
 unsigned int num_stationary_items(std::vector<Item*>& items) {
     unsigned int res = 0;
     for (Item* it : items) {
-        if (!it->being_carried) res++;
+        if (!it->being_carried && !it->in_box) res++;
     }
     return res;
 }

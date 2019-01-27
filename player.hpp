@@ -5,6 +5,7 @@
 #include "item.hpp"
 #include "constants.hpp"
 #include "powerup.hpp"
+#include "input.hpp"
 
 const unsigned int PLAYER_RADIUS = 8;
 
@@ -27,13 +28,14 @@ enum Direction { Up, Right, Down, Left };
 struct Player {
     Player(
         unsigned int index,
-        KeyConfig config,
         sf::Vector2f house_pos,
         sf::Texture* texture,
         sf::Texture* house_texture
     );
 
-    KeyConfig key_config;
+    input::InputHandler* input_handler;
+    bool connected;
+
     unsigned int index;
     bool stunned;
     bool moving;

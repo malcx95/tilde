@@ -2,23 +2,27 @@
 
 Player::Player(
     unsigned int index,
-    KeyConfig config,
     sf::Vector2f house_pos,
     sf::Texture* texture,
     sf::Texture* house_texture
-) : key_config{config}, index{index}, direction{Down}, shape{PLAYER_RADIUS} {
+) : index{index}, direction{Down}, shape{PLAYER_RADIUS} {
     this->stunned = false;
     this->moving = false;
     this->carried_item = nullptr;
     this->powerup = nullptr;
+    this->input_handler = nullptr;
+    this->connected = false;
 
     this->house_sprite.setTexture(*house_texture);
-    this->house_sprite.setPosition(house_pos);
+    auto house_center = sf::Vector2f(this->house_sprite.getLocalBounds().width / 2, this->house_sprite.getLocalBounds().height / 2);
+
+    this->house_sprite.setOrigin(house_center);
+    this->house_sprite.setPosition(house_pos + house_center);
 
     this->sprite.setTexture(*texture);
     this->sprite.setOrigin(PLAYER_RADIUS, PLAYER_RADIUS);
     this->shape.setOrigin(PLAYER_RADIUS, PLAYER_RADIUS);
-    auto player_pos = house_pos + sf::Vector2f(this->house_sprite.getLocalBounds().width / 2, this->house_sprite.getLocalBounds().height / 2);
+    auto player_pos = house_pos + house_center;
     set_position(player_pos);
 
     for (unsigned int i = 0; i < NUM_BOXES; i++) {
