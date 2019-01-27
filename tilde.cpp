@@ -209,11 +209,24 @@ void remove_powerup(std::vector<Powerup*>& powerups, Powerup* powerup) {
     delete powerup;
 }
 
+bool powerup_within_bounds(Powerup* powerup) {
+    float powerup_x_pos = powerup->sprite.getPosition().x;
+    float powerup_y_pos = powerup->sprite.getPosition().y;
+    sf::FloatRect powerup_bounds = powerup->sprite.getGlobalBounds();
+    if (powerup_x_pos < 0 + powerup_bounds.width/2 ||
+        powerup_y_pos < 0 + powerup_bounds.height/2 ||
+        powerup_x_pos > WINDOW_WIDTH - powerup_bounds.width ||
+        powerup_y_pos > WINDOW_HEIGHT - powerup_bounds.height) {
+        return false;
+    }
+    return true;
+}
+
 bool is_free_to_place(Powerup* powerup,
         std::vector<Player>& players) {
     for (Player& p : players) {
-        if (p.house_sprite.getGlobalBounds().intersects(
-                    powerup->sprite.getGlobalBounds())) {
+        if (p.house_sprite.getGlobalBounds().intersects(powerup->sprite.getGlobalBounds()) ||
+            !powerup_within_bounds(powerup)) {
             return false;
         }
     }
@@ -387,10 +400,6 @@ int main() {
     sf::Clock delta_clock;
     sf::Clock spawn_clock;
     sf::Clock powerup_clock;
-
-    bool js_connnected = sf::Joystick::isConnected(0);
-    unsigned int buttons = sf::Joystick::getButtonCount(0);
-    std::cout << js_connnected << ":" << buttons << std::endl;
 
     bool game_finished = false;
     std::string win_text = "";
