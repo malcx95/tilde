@@ -10,7 +10,7 @@ enum PowerupType { IMMUNITY, FASTER, FIRE, STEALING };
 
 const float POWERUP_TIME = 5.0;
 const unsigned int POWERUP_WIDTH = 6;
-const unsigned int MAX_NUM_POWERUPS = 1000;
+const unsigned int MAX_NUM_POWERUPS = 10;
 
 const unsigned int PROGRESSBAR_WIDTH = 30;
 const unsigned int PROGRESSBAR_HEIGHT = 5;
@@ -27,6 +27,7 @@ struct Powerup {
     PowerupType type;
 
     sf::Clock clock;
+    sf::Clock since_spawn;
 
     bool active;
 
